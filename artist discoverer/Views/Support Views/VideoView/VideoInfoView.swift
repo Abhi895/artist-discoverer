@@ -45,7 +45,6 @@ private struct SongInfoView: View {
     @State var currentFollowing: Bool
     @Binding var offset: Double
     
-    @Namespace private var followNamespace
     
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
@@ -55,9 +54,11 @@ private struct SongInfoView: View {
                     HStack(alignment: .center) {
                         Text(song.artistName)
                             .font(.system(size: 25, weight: .bold, design: .serif))
+                            .minimumScaleFactor(0.8)
+                            .lineLimit(1)
                         
                         Button {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                            withAnimation(.easeInOut(duration: 0.2)) {
                                 currentFollowing.toggle()
                                 if currentFollowing {
                                     videoManager.following.append(song.artistName)
@@ -69,37 +70,20 @@ private struct SongInfoView: View {
                             }
                         } label: {
                             ZStack {
-                                // Container that keeps a stable width during morph
-                                Group {
-                                    if !currentFollowing {
-                                        Text("Follow")
-                                            .font(.system(size: 12, weight: .bold, design: .rounded))
-                                            .padding(.horizontal, 6)
-                                            .padding(.vertical, 5)
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 8)
-                                                    .stroke(.white)
-                                                    .background(Color.clear)
-                                            )
-                                            .fixedSize(horizontal: true, vertical: true)
-                                            .opacity(1)
-                                    } else {
-                                        Image(systemName: "checkmark.circle")
-                                            .font(.system(size: 20))
-                                            .foregroundStyle(.white)
-                                            .opacity(1)
-                                    }
+                                if !currentFollowing {
+                                    Image(systemName: "plus.circle")
+                                        .font(.system(size: 19))
+                                        .foregroundStyle(.white)
+                                        .opacity(1)
+                                } else {
+                                    Image(systemName: "checkmark.circle")
+                                        .font(.system(size: 19))
+                                        .foregroundStyle(.white)
+                                        .opacity(1)
                                 }
-                                .frame(minWidth: 70, alignment: .leading) // stabilize width to fit "Follow"
-                                .matchedGeometryEffect(id: "followControl", in: followNamespace)
-                                .animation(nil, value: currentFollowing) // prevent implicit size animation inside
                             }
-                            .contentShape(Rectangle())
-                            .transition(.asymmetric(
-                                insertion: .opacity.combined(with: .scale(scale: 1.02)),
-                                removal: .opacity.combined(with: .scale(scale: 0.98))
-                            ))
                         }
+                        .buttonStyle(ShrinkingButton())
                         
                     }
                     .padding(.bottom, 4)

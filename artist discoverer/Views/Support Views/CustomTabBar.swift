@@ -65,14 +65,12 @@ enum Tab: String, CaseIterable {
     case home = "Home"
     case search = "Search"
     case library = "Library"
-    case profile = "Profile"
     
     var icon: String {
         switch self {
         case .home: return "house"
         case .search: return "magnifyingglass"
         case .library: return "books.vertical"
-        case .profile: return "person.crop.circle"
         }
     }
 }

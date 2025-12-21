@@ -44,30 +44,31 @@ struct ActionButtonsView: View {
                             .animation(.easeInOut(duration: 0.15), value: liked)
                     }
                     
+                    
                     Text("3.4K")
                         .font(.system(size: 12, weight: .regular, design: .rounded))
                         .foregroundStyle(.white)
                     
                 }
                 
-                VStack(spacing: 2) {
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            print("COMMENTING")
-                        }
-                    } label: {
-                        Image(systemName: "message")
-                            .foregroundStyle(.white)
-                            .font(.system(size: 23))
-                            .shadow(color: .black.opacity(0.6), radius: 14)
-
-                    }
-                    
-                    Text("834")
-                        .font(.system(size: 12, weight: .regular, design: .rounded))
-                        .foregroundStyle(.white)
-                    
-                }
+//                VStack(spacing: 2) {
+//                    Button {
+//                        withAnimation(.easeInOut(duration: 0.2)) {
+//                            print("COMMENTING")
+//                        }
+//                    } label: {
+//                        Image(systemName: "message")
+//                            .foregroundStyle(.white)
+//                            .font(.system(size: 23))
+//                            .shadow(color: .black.opacity(0.6), radius: 14)
+//
+//                    }
+//                    
+//                    Text("834")
+//                        .font(.system(size: 12, weight: .regular, design: .rounded))
+//                        .foregroundStyle(.white)
+//                    
+//                }
                 
                 VStack(spacing: 2) {
                     Button {
@@ -76,11 +77,13 @@ struct ActionButtonsView: View {
                         }
                     } label: {
                         Image(systemName: "paperplane")
-                            .foregroundStyle(.white)
+//                            .foregroundStyle(.white)
                             .font(.system(size: 23))
                             .shadow(color: .black.opacity(0.6), radius: 14)
 
                     }
+                    .buttonStyle(ShrinkingButton())
+
                     
                     Text("2.1K")
                         .font(.system(size: 12, weight: .regular, design: .rounded))
@@ -88,25 +91,48 @@ struct ActionButtonsView: View {
                     
                 }
                 
+                
+                
                 VStack(spacing: 2) {
                     Button {
-                        withAnimation(.easeInOut(duration: 0.1)) {
-                            self.saved.toggle()
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            saved.toggle()
                         }
                     } label: {
-                        Image(systemName: self.saved ? "bookmark.fill" : "bookmark")
-                            .foregroundStyle(saved ? .yellow : .white)
-                            .font(.system(size: 26))
-                            .shadow(color: .black.opacity(0.6), radius: 14)
+                        Image(saved ? "spotify bg clr" : "spotify bg")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 30, height: 30)
+                            .shadow(color: saved ? .green.opacity(0.3) : .black.opacity(0.5), radius: 11)
 
+                    }
+                    .buttonStyle(ShrinkingButton())
+                    
+                    if !saved {
+                        Text("Save")
+                            .font(.system(size: 12, weight: .regular, design: .rounded))
+                            .foregroundStyle(.white)
                     }
                     
                 }
+
             }
         }
         .padding([.horizontal, .top], 21)
-        .padding(.bottom, 60)
+        .padding(.bottom, saved ? 35 : 20)
         
         
+    }
+}
+
+struct ShrinkingButton: ButtonStyle {
+    
+    var foregroundColor: Color = .white
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.8 : 1)
+            .foregroundStyle(configuration.isPressed ? .white.opacity(0.4) : foregroundColor)
+            .animation(.easeOut(duration: 0.2), value: configuration.isPressed)
     }
 }
