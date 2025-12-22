@@ -25,9 +25,8 @@ struct CustomTabBar: View {
                     
                     Button(action: {
                         // Add a small animation when switching
-                        withAnimation(.easeInOut(duration: 0.1)) {
                             selectedTab = tab
-                        }
+                        
                     }) {
                         VStack(spacing: 4) {
                             Image(systemName: tab.icon)
@@ -46,8 +45,7 @@ struct CustomTabBar: View {
                 }
             }
             
-            .padding(.top, 9)
-            .padding(.bottom, 7)
+            .padding(.top, 10)
             .padding(.horizontal, 5)
             .background(Color.tabBarBackground)
         }

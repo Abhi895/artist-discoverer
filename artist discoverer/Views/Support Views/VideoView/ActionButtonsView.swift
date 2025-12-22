@@ -98,6 +98,8 @@ struct ActionButtonsView: View {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             saved.toggle()
                         }
+                        
+                        
                     } label: {
                         Image(saved ? "spotify bg clr" : "spotify bg")
                             .resizable()
@@ -119,7 +121,7 @@ struct ActionButtonsView: View {
             }
         }
         .padding([.horizontal, .top], 21)
-        .padding(.bottom, saved ? 35 : 20)
+        .padding(.bottom, saved ? 75 : 60)
         
         
     }

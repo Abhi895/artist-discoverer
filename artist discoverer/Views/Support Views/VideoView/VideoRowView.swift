@@ -11,6 +11,9 @@ import AVKit
 struct VideoRowView: View {
     let url: URL
     let index: Int
+    let preview: Bool
+    let followingOnly: Bool
+    
     @State private var player: AVPlayer?
     @State private var isPlaying = false
     @State private var showPlayButton = false
@@ -23,15 +26,18 @@ struct VideoRowView: View {
     
     @ObservedObject private var videoManager = VideoManager.shared
     
+    // --- CHECK: Is this video allowed to play in the current mode? ---
+    private var isCorrectModeForPlayback: Bool {
+        return preview != videoManager.isFullScreenMode
+    }
+    
     var body: some View {
                 
         ZStack {
             
             if let player = player {
                 VideoPlayerView(player: player)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .clipped()
-                    .ignoresSafeArea(.all)
             } else {
                 Color.black
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -51,10 +57,12 @@ struct VideoRowView: View {
                 }
             }
             
-            LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .top, endPoint: .bottom)
-            
-            VideoInfoView(index: self.index)
-            ActionButtonsView(liked: $liked)
+            LinearGradient(colors: [.clear, .black.opacity(0.6)], startPoint: .top, endPoint: .bottom)
+
+            if !preview {
+                VideoInfoView(index: self.index, followingOnly: self.followingOnly)
+                ActionButtonsView(liked: $liked)
+            }
             
             if showLikeBurst {
                 Image(systemName: "heart.fill")
@@ -71,7 +79,6 @@ struct VideoRowView: View {
             
             if showPlayButton {
                 Button(action: {
-                    // When manually playing via button, set this as current and play
                     videoManager.setCurrentPlaying(index: index)
                     videoManager.userPlayedCurrentVideo()
                     playVideo()
@@ -83,63 +90,82 @@ struct VideoRowView: View {
             }
             
         }
-        .contentShape(Rectangle())
+        .overlay(
+            RoundedRectangle(cornerRadius: 24)
+                .stroke(preview ? .white.opacity(0.5) : .clear, lineWidth: 0.5)
+        )
         .onTapGesture {
-            if isPlaying {
-                pauseVideo()
-                videoManager.userPausedCurrentVideo()
-                showPlayButton = true
-            } else {
-                videoManager.setCurrentPlaying(index: index)
-                videoManager.userPlayedCurrentVideo()
-                playVideo()
+            if !preview {
+                if isPlaying {
+                    pauseVideo()
+                    videoManager.userPausedCurrentVideo()
+                    showPlayButton = true
+                } else {
+                    videoManager.setCurrentPlaying(index: index)
+                    videoManager.userPlayedCurrentVideo()
+                    playVideo()
+                }
             }
         }
         .onTapGesture(count: 2) {
-            withAnimation(.spring(response: 0.25, dampingFraction: 0.7, blendDuration: 0.1)) {
-                self.liked = true
-            }
-            // Trigger burst at last tap location
-            showLikeBurst = true
-            likeBurstPulse = true
-            // Reset pulse so it can be retriggered
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                likeBurstPulse = false
-            }
-            // Fade out after a short delay
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                withAnimation(.easeOut(duration: 0.25)) {
-                    showLikeBurst = false
+            
+            if !preview {
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.7, blendDuration: 0.1)) {
+                    self.liked = true
+                }
+                showLikeBurst = true
+                likeBurstPulse = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    likeBurstPulse = false
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    withAnimation(.easeOut(duration: 0.25)) {
+                        showLikeBurst = false
+                    }
                 }
             }
         }
         .onAppear {
             setupPlayer()
             showPlayButton = false
-            if videoManager.currentPlayingIndex == 0 && !videoManager.userHasPausedCurrentVideo {
-                playVideo()
-            }
         }
         .onDisappear {
-            pauseVideo()
+            player?.pause()
+            if !preview {
+                 player?.replaceCurrentItem(with: nil)
+                 player = nil
+            }
+        }
+        .onChange(of: videoManager.isFullScreenMode) { _, newMode in
+            if videoManager.currentPlayingIndex == index {
+                if isCorrectModeForPlayback && !videoManager.userHasPausedCurrentVideo {
+                    if preview {
+                        // Delay to allow full screen exit
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                             if self.videoManager.currentPlayingIndex == self.index
+                                && self.isCorrectModeForPlayback
+                                && !self.videoManager.userHasPausedCurrentVideo {
+                                self.playVideo()
+                            }
+                        }
+                    } else {
+                        playVideo()
+                    }
+                } else {
+                    pauseVideo()
+                }
+            }
         }
         .onChange(of: videoManager.currentPlayingIndex) { oldValue, newValue in
-            print("Video \(index): VideoManager index changed from \(oldValue) to \(newValue)")
-            
             if newValue == index {
-                if !isPlaying && player != nil && !videoManager.userHasPausedCurrentVideo {
-                    print("Video \(index): Starting playback because this is current and user hasn't paused")
+                if !isPlaying && player != nil && !videoManager.userHasPausedCurrentVideo && isCorrectModeForPlayback {
                     playVideo()
                 } else if videoManager.userHasPausedCurrentVideo {
-                    print("Video \(index): Not auto-playing because user paused this video")
                     showPlayButton = true
                 }
             } else {
-                // This video should be paused (either different video or pause all)
                 if isPlaying {
-                    print("Video \(index): Pausing because current is \(newValue)")
                     pauseVideo()
-                    // Don't show button here - let user interaction control button visibility
                 }
             }
         }
@@ -148,98 +174,108 @@ struct VideoRowView: View {
     
     private func setupPlayer() {
         print("Setting up player for: \(url.lastPathComponent) at index \(index)")
-        print("Full URL: \(url)")
-        debugInfo = "Setting up player..."
+        debugInfo = "Loading..."
         
-        // Check if file exists (for bundled files)
-        if url.isFileURL {
-            let fileExists = FileManager.default.fileExists(atPath: url.path)
-            print("File exists: \(fileExists)")
-            if !fileExists {
-                debugInfo = "File not found: \(url.lastPathComponent)"
-                return
-            }
-        }
-        
-        let playerItem = AVPlayerItem(url: url)
-        player = AVPlayer(playerItem: playerItem)
-        player?.actionAtItemEnd = .none
-        player?.isMuted = true
-        
-        debugInfo = "Player created, checking status..."
+        let asset = AVURLAsset(url: url)
         
         Task {
-            //            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            let finalItem: AVPlayerItem
             
-            await MainActor.run {
-                if let player = player {
-                    let status = player.currentItem?.status
-                    switch status {
-                    case .readyToPlay:
-                        debugInfo = "Ready to play!"
-                        // Only start playing if this is the current video and user hasn't paused it
-                        if videoManager.currentPlayingIndex == index && !videoManager.userHasPausedCurrentVideo {
-                            print("Auto-playing video at index \(index) because it's current and user hasn't paused")
-                            playVideo()
-                        } else {
-                            print("Not auto-playing video at index \(index) because current is \(videoManager.currentPlayingIndex) or user paused it")
-                            if videoManager.userHasPausedCurrentVideo && videoManager.currentPlayingIndex == index {
-                                // Show play button if user paused this video
-                                showPlayButton = true
-                            }
-                        }
-                    case .failed:
-                        debugInfo = "Failed to load: \(player.currentItem?.error?.localizedDescription ?? "Unknown error")"
-                        print("Player failed: \(player.currentItem?.error?.localizedDescription ?? "Unknown")")
-                    case .unknown:
-                        debugInfo = "Status unknown"
-                    case .none:
-                        debugInfo = "No player item"
-                    @unknown default:
-                        debugInfo = "Unknown status"
+            if preview {
+                // --- STRICT AUDIO STRIPPING ---
+                // We create a new empty composition (No audio tracks exist here)
+                let composition = AVMutableComposition()
+                
+                do {
+                    // 1. Load video tracks from source
+                    let tracks = try await asset.load(.tracks)
+                    let videoTracks = tracks.filter { $0.mediaType == .video }
+                    
+                    if let sourceVideoTrack = videoTracks.first {
+                        // 2. Create a video track in the composition
+                        let compVideoTrack = composition.addMutableTrack(
+                            withMediaType: .video,
+                            preferredTrackID: kCMPersistentTrackID_Invalid
+                        )
+                        
+                        // 3. Insert the source video range into the composition
+                        // Using the track's timeRange ensures we match the video content exactly
+                        let timeRange = try await sourceVideoTrack.load(.timeRange)
+                        try compVideoTrack?.insertTimeRange(timeRange, of: sourceVideoTrack, at: .zero)
+                        
+                        // 4. Orientation Fix (Important for composition)
+                        let transform = try await sourceVideoTrack.load(.preferredTransform)
+                        compVideoTrack?.preferredTransform = transform
+                        
+                        // Success: We use the stripped composition
+                        finalItem = AVPlayerItem(asset: composition)
+                    } else {
+                        // No video track found? Return empty item (Silent)
+                        print("Error: No video track found for preview stripping")
+                        return
                     }
+                } catch {
+                    print("Error stripping audio: \(error)")
+                    return // Stop setup on error to prevent audio leak
+                }
+                
+            } else {
+                // Not a preview: Use original asset
+                finalItem = AVPlayerItem(asset: asset)
+            }
+            
+            // Assign to Main Actor
+            await MainActor.run {
+                let newPlayer = AVPlayer(playerItem: finalItem)
+                newPlayer.actionAtItemEnd = .none
+                
+                // Mute settings just in case
+                newPlayer.isMuted = preview
+                newPlayer.volume = preview ? 0 : 1
+                
+                // Only assign player NOW, after all processing is done
+                self.player = newPlayer
+                debugInfo = "Ready"
+                
+                // Auto-play check
+                if videoManager.currentPlayingIndex == index
+                    && !videoManager.userHasPausedCurrentVideo
+                    && isCorrectModeForPlayback {
+                    playVideo()
+                }
+                
+                // Loop Logic
+                NotificationCenter.default.addObserver(
+                    forName: .AVPlayerItemDidPlayToEndTime,
+                    object: finalItem,
+                    queue: .main
+                ) { _ in
+                    finalItem.seek(to: .zero, completionHandler: nil)
                 }
             }
-        }
-        
-        // Loop the video when it ends
-        NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime,
-            object: playerItem,
-            queue: .main
-        ) { _ in
-            print("Video ended, looping: \(url.lastPathComponent)")
-            playerItem.seek(to: .zero, completionHandler: nil)
         }
     }
     
     private func playVideo() {
-        guard let player = player else {
-            debugInfo = "No player available"
-            return
-        }
-        print("Starting playback for: \(url.lastPathComponent) at index \(index)")
-        debugInfo = "Playing..."
-        player.isMuted = false // Unmute when playing
+        guard let player = player else { return }
+        
+        if !isCorrectModeForPlayback { return }
+        
+        // Ensure volume settings are correct before playing
+        player.isMuted = preview
+        player.volume = preview ? 0 : 1.0
+        
         player.play()
         isPlaying = true
-        
-        // Always hide play button when video starts playing
         showPlayButton = false
-        
     }
     
     private func pauseVideo() {
         guard let player = player else { return }
-        print("Pausing video: \(url.lastPathComponent) at index \(index)")
-        debugInfo = "Paused"
         player.pause()
-        player.isMuted = true // Mute when paused
         isPlaying = false
     }
-    
 }
-
 struct VideoPlayerView: UIViewRepresentable {
     let player: AVPlayer
     
@@ -275,82 +311,6 @@ final class VideoPlayerUIView: UIView {
             playerLayer.player = newValue
             playerLayer.videoGravity = .resizeAspectFill
         }
-    }
-}
-
-
-struct LoopRenderer: TextRenderer {
-    var offset: Double
-    var spacing: Double = 20
-    
-    var animatableData: Double {
-        get { offset }
-        set { offset = newValue }
-    }
-    
-    func draw(layout: Text.Layout, in context: inout GraphicsContext) {
-        for line in layout {
-            let cycleDistance = line.typographicBounds.width + spacing
-            
-            let moveAmount = offset * cycleDistance
-            
-            
-            var main = context
-            main.translateBy(x: moveAmount, y: 0)
-            main.draw(line)
-            
-            
-            var ghost = context
-            ghost.translateBy(x: moveAmount - cycleDistance, y: 0)
-            ghost.draw(line)
-        }
-    }
-}
-
-struct FlowLayout: Layout {
-    var spacing: CGFloat = 8 // Gap between items
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let frames = arrangeSubviews(proposal: proposal, subviews: subviews)
-        let width = frames.map { $0.maxX }.max() ?? 0
-        let height = frames.map { $0.maxY }.max() ?? 0
-        return CGSize(width: width, height: height)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let frames = arrangeSubviews(proposal: proposal, subviews: subviews)
-        for (index, frame) in frames.enumerated() {
-            guard index < subviews.count else { break }
-            let origin = CGPoint(x: bounds.minX + frame.minX, y: bounds.minY + frame.minY)
-            subviews[index].place(at: origin, proposal: ProposedViewSize(width: frame.width, height: frame.height))
-        }
-    }
-
-    // Helper to calculate positions
-    private func arrangeSubviews(proposal: ProposedViewSize, subviews: Subviews) -> [CGRect] {
-        var frames: [CGRect] = []
-        var x: CGFloat = 0
-        var y: CGFloat = 0
-        var maxHeight: CGFloat = 0
-        let maxWidth = proposal.width ?? .infinity
-
-        for view in subviews {
-            let size = view.sizeThatFits(.unspecified)
-            
-            // If this item pushes past the edge, move to next line (reset X, increase Y)
-            if x + size.width > maxWidth {
-                x = 0
-                y += maxHeight + spacing
-                maxHeight = 0
-            }
-            
-            frames.append(CGRect(origin: CGPoint(x: x, y: y), size: size))
-            
-            // Advance X pointer for the next item
-            x += size.width + spacing
-            maxHeight = max(maxHeight, size.height)
-        }
-        return frames
     }
 }
 

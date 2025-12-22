@@ -21,7 +21,7 @@ struct ContentView: View {
                 VStack(spacing: 0) {
                     switch selectedTab {
                     case .library:
-                        LibraryView()
+                        LibraryView(selectedTab: $selectedTab)
                             .onAppear {
                                 // Pause all videos when switching to other tabs
                                 videoManager.pauseAllVideos()

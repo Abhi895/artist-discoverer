@@ -9,8 +9,21 @@ import SwiftUI
 
 struct SearchView: View {
     var body: some View {
-        Spacer()
-        Text("SEARCH VIEW")
+        
+        VStack {
+            HStack(alignment: .top) {
+                Text("Search")
+                    .font(.system(size: 40, weight: .black, design: .default))
+                    .foregroundStyle(.white)
+                
+                Spacer()
+            }
+            .padding()
+            
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.tabBarBackground)
     }
 }
 

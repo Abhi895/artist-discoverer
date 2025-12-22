@@ -12,7 +12,6 @@ internal import Combine
 
 // MARK: - DiscoverView
 struct HomeView: View {
-    //    @State var selectedTab: Tab = .discover
     
     @State private var currentVideoIndex = 0
     @ObservedObject private var videoManager = VideoManager.shared
@@ -56,7 +55,7 @@ struct HomeView: View {
             ScrollView {
                 LazyVStack(spacing: 0) {
                     ForEach(Array(infiniteVideoURLs.enumerated()), id: \.offset) { index, url in
-                        VideoRowView(url: url, index: index)
+                        VideoRowView(url: url, index: index, preview: false, followingOnly: false)
                             .containerRelativeFrame([.horizontal, .vertical])
                             .id(index)
                     }
@@ -66,7 +65,7 @@ struct HomeView: View {
             .scrollTargetBehavior(.paging)
             .scrollIndicators(.hidden)
             .scrollPosition(id: .init(get: {
-                videoManager.scrollPosition
+                videoManager.currentPlayingIndex
             }, set: { newValue in
                 if let newIndex = newValue {
                     print("Scroll position changed to: \(newIndex)")
@@ -77,10 +76,16 @@ struct HomeView: View {
             .ignoresSafeArea(.container, edges: .top)
         }
         .onAppear {
+            videoManager.isFullScreenMode = true
             // Reset to current video when returning to discover tab
             print("Discover view appeared, resetting to current video: \(currentVideoIndex)")
-            videoManager.resetToIndex(currentVideoIndex)
+            videoManager.setCurrentPlaying(index: currentVideoIndex)
         }
+        .onDisappear {
+                    // Tell the manager: "We are leaving Full Screen Mode"
+                    videoManager.isFullScreenMode = false
+                    videoManager.pauseAllVideos()
+                }
         .ignoresSafeArea(.keyboard)
         .task {
             // Configure audio session for video playback
@@ -100,6 +105,6 @@ struct HomeView: View {
 }
 
 
-#Preview {
-    HomeView()
-}
+//#Preview {
+//    HomeView()
+//}
