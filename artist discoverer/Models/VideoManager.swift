@@ -1,65 +1,87 @@
-//
-//  VideoManager.swift
-//  artist discoverer
-//
-//  Created by Abhi Reddy on 14/12/2025.
-//
-
 import SwiftUI
-internal import Combine
+import Combine
+import AVKit
+internal import System
 
 class VideoManager: ObservableObject {
     static let shared = VideoManager()
-    @Published var currentPlayingIndex: Int = 0
-    @Published var userHasPausedCurrentVideo: Bool = false
+
+    @Published var videoss: [VideoModel] = []
+    @Published var currentIndex: Int = 0
     
-    @Published var isFullScreenMode: Bool = false
-    
-    @Published var songsInfo: [Song] = [
-        Song(artistName: "Demae", songDesc: "Step into the kaleidoscope. 📺✨ 'Light' is a trip through my mind.", hashtags: ["#neosoul", "#retroaesthetic", "#visualart", "#groovy"], songName: "Light"),
-        Song(artistName: "Lloyiso", songDesc: "It’s terrifying when you aren't ready for love. 💔 wrote this at midnight.", hashtags: ["#rnbballad", "#emotionalvocals", "#heartbreak", "#soulmusic"], songName: "Scary"),
-        Song(artistName: "JERUB", songDesc: "Gathering 'round the fire with the people you love. 🔥 Finding peace in chaos.", hashtags: ["#fireside", "#acousticvibes", "#soulfulmusic", "#community"], songName: "Kumbaya"),
-        Song(artistName: "TYLER LEWIS", songDesc: "Still seeing shadows at the door? 🚪💔 We’re moving on, one step at a time.", hashtags: ["#rnbpop", "#breakupsong", "#movingon", "#newartist"], songName: "eventually"),
-        Song(artistName: "PRYVT", songDesc: "Bringing it back to the streets with this one. Just me and my guitar. 🎸✨", hashtags: ["#indiepop", "#streetperformer", "#chillvibes", "#guitarist"], songName: "PALETTE"),
-        Song(artistName: "Only The Poets", songDesc: "Parking lot sessions turning into core memories. 🚗💨 'Saké' is out now!", hashtags: ["#indieband", "#poprock", "#sake", "#bandlife"], songName: "Saké"),
-        Song(artistName: "SUMMER", songDesc: "Late night drives and memories I can't shake. 🌃🚗 'stillxloveyou' hits different.", hashtags: ["#nightdrive", "#popballad", "#heartbreakanthem", "#citylights"], songName: "stillxloveyou")
-    ]
-    @Published var following: [Song] = [Song(artistName: "TYLER LEWIS", songDesc: "Still seeing shadows at the door? 🚪💔 We’re moving on, one step at a time.", hashtags: ["#rnbpop", "#breakupsong", "#movingon", "#newartist"], songName: "eventually"),
-        Song(artistName: "Only The Poets", songDesc: "Parking lot sessions turning into core memories. 🚗💨 'Saké' is out now!", hashtags: ["#indieband", "#poprock", "#sake", "#bandlife"], songName: "Saké"),
-    Song(artistName: "SUMMER", songDesc: "Late night drives and memories I can't shake. 🌃🚗 'stillxloveyou' hits different.", hashtags: ["#nightdrive", "#popballad", "#heartbreakanthem", "#citylights"], songName: "stillxloveyou")]
-    
-    private init() {}
-    
-    func setCurrentPlaying(index: Int) {
-        print("VideoManager: Setting current playing to index \(index)")
-        currentPlayingIndex = index
-        userHasPausedCurrentVideo = false
+    static let emptyPlayer = AVPlayer()
+
+    var players: [Int:AVQueuePlayer] = [:]
+    var loopers: [Int:AVPlayerLooper] = [:]
+
+    var videoURLs: [URL] {
+        
+        var urls: [URL] = []
+        if let videosFromRoot = Bundle.main.urls(forResourcesWithExtension: "mp4", subdirectory: nil) {
+            urls.append(contentsOf: videosFromRoot)
+        }
+                
+        return urls
     }
     
-    func pauseAllVideos() {
-        print("VideoManager: Pausing all videos")
-        currentPlayingIndex = -1
+    func cleanUp(currentIndex: Int) {
+        for (index, player) in players {
+            if abs(index-currentIndex) > 1 {
+                player.pause()
+                players[index] = nil
+                loopers[index] = nil
+            }
+        }
     }
     
-    func resetToIndex(_ index: Int) {
-        print("VideoManager: Resetting to index \(index)")
-        currentPlayingIndex = index
+    func onScroll(to index: Int) {
+        
+        print("I = \(index)")
+        print(players)
+        
+        if let player = getPlayer(at: index) {
+            print("PLAYING AT \(index)")
+            player.playImmediately(atRate: 1.0)
+        }
+        
+        if let prevPlayer = players[index-1] {
+            print("PREV ADDED \(players)")
+            print("PAUSING AT \(index - 1)")
+            prevPlayer.pause()
+        }
+                
+        if let nextPlayer = getPlayer(at: index+1) {
+            print("NEXT ADDED -\(players)")
+            print("PAUSING AT \(index + 1)")
+            nextPlayer.pause()
+        }
+        
+        cleanUp(currentIndex: index)
+        print("CLEANED UP - \(players)")
+    }
+
+    func getPlayer(at index: Int) -> AVPlayer? {
+        guard index >= 0 && index < videoURLs.count else { return nil }
+
+        if let player = players[index] { return player }
+        
+        let item = AVPlayerItem(url: videoURLs[index])
+        
+//        item.preferredForwardBufferDuration = 3.0
+
+        let player = AVQueuePlayer(playerItem: item)
+
+        loopers[index] = AVPlayerLooper(player: player, templateItem: item)
+        players[index] = player
+        
+        return player
     }
     
-    func userPausedCurrentVideo() {
-        print("VideoManager: User paused current video")
-        userHasPausedCurrentVideo = true
-    }
-    
-    func userPlayedCurrentVideo() {
-        print("VideoManager: User played current video")
-        userHasPausedCurrentVideo = false
-    }
+
 }
 
-struct Song {
-    var artistName: String
-    var songDesc: String
-    var hashtags: [String]
-    var songName: String
-}
+//protocol FeedManager {
+//    func onScroll (to newIndex : Int)
+//
+//    func getPlayer (at index : Int) -> AVPlayer?
+//}

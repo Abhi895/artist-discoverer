@@ -4,7 +4,7 @@
 //
 //  Created by Abhi Reddy on 28/11/2025.
 //
-
+//
 import SwiftUI
 import FirebaseCore
 import GoogleSignIn
@@ -27,10 +27,11 @@ struct artist_discovererApp: App {
         
     var body: some Scene {
         WindowGroup {
-            ContentView().onOpenURL { url in
-                //Handle Google Oauth URL
-                GIDSignIn.sharedInstance.handle(url)
-            }
+            HomeView()
+//            ContentView().onOpenURL { url in
+//                //Handle Google Oauth URL
+//                GIDSignIn.sharedInstance.handle(url)
+//            }
         }
     }
 }
