@@ -9,23 +9,10 @@ struct HomeView: View {
         ScrollView {
             LazyVStack(spacing: 0) {
                 ForEach(0..<videoManager.videos.count, id: \.self) { index in
-                    
-                    ZStack {
-                        Color.black
-                        
-                        if let player = videoManager.players[index] {
-                            
-                            let video = videoManager.videos[index]
-                            VideoCell(player: player, index: index, video: video)
-
-                        }
-                    }
+                    VideoCell(index: index, video: videoManager.videos[index])
                     .containerRelativeFrame(.vertical)
                     .id(index)
-                    .onTapGesture {
-                        print(index)
-                        videoManager.togglePlay(at: index)
-                    }
+
                 }
 
             }

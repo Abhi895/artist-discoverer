@@ -11,8 +11,6 @@ struct ActionButtonsView: View {
     @Binding var liked: Bool
     @State var saved: Bool = false
     @State private var likePulse: Bool = false
-    @ObservedObject var videoManager = VideoManager.shared
-
 
     var body: some View {
         
@@ -29,7 +27,6 @@ struct ActionButtonsView: View {
                             if liked {
                                 // Trigger pulse and log current index safely
                                 likePulse.toggle()
-                                print("Liked at index: \(videoManager.currentIndex)")
                             }
                         }
                         // Reset the pulse state after a short delay so it can be retriggered

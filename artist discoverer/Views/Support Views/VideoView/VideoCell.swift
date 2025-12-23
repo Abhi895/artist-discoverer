@@ -9,7 +9,6 @@ import SwiftUI
 import AVKit
 
 struct VideoCell: View {
-    let player: AVPlayer
     let index: Int
     let video: Video
     
@@ -19,10 +18,21 @@ struct VideoCell: View {
         
     @ObservedObject var videoManager = VideoManager.shared
     
+    private static let gradient = LinearGradient(
+        colors: [.clear, .black.opacity(0.6)],
+        startPoint: .top,
+        endPoint: .bottom
+    )
+    
     var body: some View {
         ZStack {
-            VideoView(player: player)
-            LinearGradient(colors: [.clear, .black.opacity(0.6)], startPoint: .top, endPoint: .bottom)
+            Color.black
+            
+            if let player = videoManager.players[index] {
+                VideoView(player: player)
+            }
+            
+            Self.gradient
             
             if videoManager.paused {
                 Image(systemName: "play.fill")
@@ -49,6 +59,10 @@ struct VideoCell: View {
             VideoInfoView(currVideo: video)
 //                .padding(.bottomLeading, 5)
 
+        }
+        .onTapGesture {
+            print(index)
+            videoManager.togglePlay(at: index)
         }
         .onTapGesture(count: 2) {
             // Ensure baseline state before animating in

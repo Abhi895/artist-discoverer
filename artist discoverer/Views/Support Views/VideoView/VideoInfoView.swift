@@ -88,15 +88,15 @@ private struct SongInfoView: View {
                             .foregroundStyle(.white)
                             .frame(width: 14, height: 14)
                         
-//                        if video.id == videoManager.currentIndex {
-//                            MarqueeSongText(video: video, offset: $offset)
-//                        } else {
+                        if video.id == videoManager.currentIndex {
+                            MarqueeSongText(video: video, offset: $offset)
+                        } else {
                             Text("\(video.songName) - \(video.artistName)")
                                 .font(.system(size: 14, weight: .bold, design: .rounded))
                                 .foregroundStyle(.white)
                                 .fixedSize()
                                 .frame(alignment: .leading)
-//                        }
+                        }
                     }
                     
                     Text(video.songDesc)
