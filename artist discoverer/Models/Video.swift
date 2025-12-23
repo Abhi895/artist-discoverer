@@ -7,12 +7,15 @@
 
 import SwiftUI
 
-struct VideoModel {
-    let id: Int
-    let url: URL
+struct Video {
+    var id: Int = 0
+    var url: URL?
     let artistName: String
     let songDesc: String
     let hashtags: [String]
     let songName: String
+    var liked: Bool = false
+    var saved: Bool = false
+    
 
 }

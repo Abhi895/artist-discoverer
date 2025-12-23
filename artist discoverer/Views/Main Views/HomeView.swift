@@ -1,10 +1,3 @@
-//
-//  HomeView.swift
-//  artist discoverer
-//
-//  Main discovery feed - infinite scroll of all videos
-//
-
 import SwiftUI
 import AVKit
 
@@ -15,15 +8,30 @@ struct HomeView: View {
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                ForEach(0..<videoManager.videoURLs.count, id: \.self) { index in
+                ForEach(0..<videoManager.videos.count, id: \.self) { index in
                     
-                    VideoView(player: videoManager.getPlayer(at: index) ?? VideoManager.emptyPlayer)
-                        .containerRelativeFrame(.vertical)
-                        .id(index)
+                    ZStack {
+                        Color.black
+                        
+                        if let player = videoManager.players[index] {
+                            
+                            let video = videoManager.videos[index]
+                            VideoCell(player: player, index: index, video: video)
+
+                        }
+                    }
+                    .containerRelativeFrame(.vertical)
+                    .id(index)
+                    .onTapGesture {
+                        print(index)
+                        videoManager.togglePlay(at: index)
+                    }
                 }
+
             }
             .scrollTargetLayout()
         }
+        .scrollIndicators(.hidden)
         .scrollTargetBehavior(.paging)
         .scrollPosition(id: $currentIndex)
         .onChange(of: currentIndex) { _, newIndex in
@@ -31,10 +39,11 @@ struct HomeView: View {
                 videoManager.onScroll(to: newIndex)
             }
         }
+        .onAppear {
+            videoManager.onScroll(to: 0)
+        }
         .ignoresSafeArea(.all)
-//        .onAppear {
-//            videoManager.onScroll(to: 0)
-//        }
+
     }
 }
 //

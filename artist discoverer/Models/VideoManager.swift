@@ -6,22 +6,48 @@ internal import System
 class VideoManager: ObservableObject {
     static let shared = VideoManager()
 
-    @Published var videoss: [VideoModel] = []
     @Published var currentIndex: Int = 0
+    @Published var paused: Bool = false
     
     static let emptyPlayer = AVPlayer()
 
-    var players: [Int:AVQueuePlayer] = [:]
+    @Published var players: [Int:AVQueuePlayer] = [:]
     var loopers: [Int:AVPlayerLooper] = [:]
-
-    var videoURLs: [URL] {
-        
-        var urls: [URL] = []
-        if let videosFromRoot = Bundle.main.urls(forResourcesWithExtension: "mp4", subdirectory: nil) {
-            urls.append(contentsOf: videosFromRoot)
+    
+    @Published var videos: [Video] = []
+    init() {
+        videos = generateVideos()
+        // Preload first two videos immediately
+        _ = getPlayer(at: 0)
+        if videos.count > 1 {
+            _ = getPlayer(at: 1)
         }
-                
-        return urls
+//        players[0]?.play()
+    }
+    
+    func generateVideos() -> [Video] {
+        var videos = [
+                    Video(artistName: "Demae", songDesc: "Step into the kaleidoscope. 📺✨ 'Light' is a trip through my mind.", hashtags: ["#neosoul", "#retroaesthetic", "#visualart", "#groovy"], songName: "Light"),
+                    Video(artistName: "Lloyiso", songDesc: "It’s terrifying when you aren't ready for love. 💔 wrote this at midnight.", hashtags: ["#rnbballad", "#emotionalvocals", "#heartbreak", "#soulmusic"], songName: "Scary"),
+                    Video(artistName: "JERUB", songDesc: "Gathering 'round the fire with the people you love. 🔥 Finding peace in chaos.", hashtags: ["#fireside", "#acousticvibes", "#soulfulmusic", "#community"], songName: "Kumbaya"),
+                    Video(artistName: "TYLER LEWIS", songDesc: "Still seeing shadows at the door? 🚪💔 We’re moving on, one step at a time.", hashtags: ["#rnbpop", "#breakupsong", "#movingon", "#newartist"], songName: "eventually"),
+                    Video(artistName: "PRYVT", songDesc: "Bringing it back to the streets with this one. Just me and my guitar. 🎸✨", hashtags: ["#indiepop", "#streetperformer", "#chillvibes", "#guitarist"], songName: "PALETTE"),
+                    Video(artistName: "Only The Poets", songDesc: "Parking lot sessions turning into core memories. 🚗💨 'Saké' is out now!", hashtags: ["#indieband", "#poprock", "#sake", "#bandlife"], songName: "Saké"),
+                    Video(artistName: "SUMMER", songDesc: "Late night drives and memories I can't shake. 🌃🚗 'stillxloveyou' hits different.", hashtags: ["#nightdrive", "#popballad", "#heartbreakanthem", "#citylights"], songName: "stillxloveyou")
+        ]
+        
+        lazy var videoURLs: [URL] = {
+            Bundle.main.urls(forResourcesWithExtension: "mp4", subdirectory: nil)!
+        }()
+        
+        
+
+        for (i, url) in videoURLs.enumerated() {
+            videos[i].id = i
+            videos[i].url = url
+        }
+        
+        return videos
     }
     
     func cleanUp(currentIndex: Int) {
@@ -34,42 +60,62 @@ class VideoManager: ObservableObject {
         }
     }
     
+    func togglePlay(at index: Int) {
+        if paused {
+            players[index]?.play()
+        } else {
+            players[index]?.pause()
+        }
+        
+        withAnimation(.easeInOut(duration: 0.2)) {
+            paused.toggle()
+        }
+    }
+    
     func onScroll(to index: Int) {
+        paused = false
+        currentIndex = index
+//        print("I = \(index)")
+//        print(players)
         
-        print("I = \(index)")
-        print(players)
-        
-        if let player = getPlayer(at: index) {
-            print("PLAYING AT \(index)")
-            player.playImmediately(atRate: 1.0)
+        for i in (index-2)...(index+2) {
+            _ = getPlayer(at: i)
         }
         
-        if let prevPlayer = players[index-1] {
-            print("PREV ADDED \(players)")
-            print("PAUSING AT \(index - 1)")
-            prevPlayer.pause()
-        }
-                
-        if let nextPlayer = getPlayer(at: index+1) {
-            print("NEXT ADDED -\(players)")
-            print("PAUSING AT \(index + 1)")
-            nextPlayer.pause()
-        }
-        
+        players.values.forEach { $0.pause() }
+        players[index]?.playImmediately(atRate: 1.0)
+//
+//
+//
+//        if let player = getPlayer(at: index) {
+//            print("PLAYING AT \(index)")
+//            player.playImmediately(atRate: 1.0)
+//        }
+//
+//        if let prevPlayer = players[index-1] {
+//            print("PREV ADDED \(players)")
+//            print("PAUSING AT \(index - 1)")
+//            prevPlayer.pause()
+//        }
+//
+//        if let nextPlayer = getPlayer(at: index+1) {
+//            print("NEXT ADDED -\(players)")
+//            print("PAUSING AT \(index + 1)")
+//            nextPlayer.pause()
+//        }
+//
         cleanUp(currentIndex: index)
-        print("CLEANED UP - \(players)")
     }
 
     func getPlayer(at index: Int) -> AVPlayer? {
-        guard index >= 0 && index < videoURLs.count else { return nil }
+        guard index >= 0 && index < videos.count else { return nil }
 
         if let player = players[index] { return player }
         
-        let item = AVPlayerItem(url: videoURLs[index])
-        
-//        item.preferredForwardBufferDuration = 3.0
-
+        let item = AVPlayerItem(url: videos[index].url!)
         let player = AVQueuePlayer(playerItem: item)
+        
+        player.automaticallyWaitsToMinimizeStalling = false
 
         loopers[index] = AVPlayerLooper(player: player, templateItem: item)
         players[index] = player

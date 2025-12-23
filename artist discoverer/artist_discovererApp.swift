@@ -27,11 +27,10 @@ struct artist_discovererApp: App {
         
     var body: some Scene {
         WindowGroup {
-            HomeView()
-//            ContentView().onOpenURL { url in
-//                //Handle Google Oauth URL
-//                GIDSignIn.sharedInstance.handle(url)
-//            }
+            ContentView().onOpenURL { url in
+                //Handle Google Oauth URL
+                GIDSignIn.sharedInstance.handle(url)
+            }
         }
     }
 }
