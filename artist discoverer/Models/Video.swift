@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct Video {
+struct Video: Hashable, Equatable {
     var id: Int = 0
     var url: URL?
     let artistName: String
@@ -16,6 +16,7 @@ struct Video {
     let songName: String
     var liked: Bool = false
     var saved: Bool = false
+    var followingArtist: Bool = false
     
 
 }

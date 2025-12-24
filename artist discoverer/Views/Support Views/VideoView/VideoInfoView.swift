@@ -9,6 +9,7 @@ import SwiftUI
 
 struct VideoInfoView: View {
     @ObservedObject private var videoManager = VideoManager.shared
+    @Binding var following: Bool
     @State private var offset: Double = 0.0
     
     var currVideo: Video?
@@ -18,8 +19,8 @@ struct VideoInfoView: View {
             if let currVideo {
                 SongInfoView(
                     video: currVideo,
-//                    currentFollowing: videoManager.following.contains(where: { $0.artistName == currentSong.artistName && $0.songName == currentSong.songName }),
-                    offset: $offset
+                    offset: $offset,
+                    following: $following
                 )
             } else {
                 VStack { Spacer() }
@@ -33,8 +34,8 @@ struct VideoInfoView: View {
 private struct SongInfoView: View {
     let video: Video
     @ObservedObject private var videoManager = VideoManager.shared
-//    @State var currentFollowing: Bool
     @Binding var offset: Double
+    @Binding var following: Bool
     
     
     var body: some View {
@@ -52,35 +53,29 @@ private struct SongInfoView: View {
                             withAnimation(.easeInOut(duration: 0.2)) {
                                 
                                 print("FOLLOWING")
-                                //                                currentFollowing.toggle()
-                                //                                if currentFollowing {
-                                //                                    videoManager.following.append(song)
-                                //                                } else {
-                                //                                    if let index = videoManager.following.firstIndex(where: { $0.artistName == song.artistName && $0.songName == song.songName }) {
-                                //                                        videoManager.following.remove(at: index)
-                                //                                    }
-                                //                                }
+                                following.toggle()
+//                                videoManager.following.append(video)
                             }
                         } label: {
                             ZStack {
-                                //                                if !currentFollowing {
-                                Image(systemName: "plus.circle")
-                                    .font(.system(size: 19))
-                                    .foregroundStyle(.white)
-                                    .opacity(1)
-                                //                                } else {
-                                //                                    Image(systemName: "checkmark.circle")
-                                //                                        .font(.system(size: 19))
-                                //                                        .foregroundStyle(.white)
-                                //                                        .opacity(1)
-                                //                                }
-                                //                            }
+                                if !following {
+                                    Image(systemName: "plus.circle")
+                                        .font(.system(size: 19))
+                                        .foregroundStyle(.white)
+                                        .opacity(1)
+                                } else {
+                                    Image(systemName: "checkmark.circle")
+                                        .font(.system(size: 19))
+                                        .foregroundStyle(.white)
+                                        .opacity(1)
+                                }
                             }
                             .buttonStyle(ShrinkingButton())
                             
                         }
-                        .padding(.bottom, 4)
                     }
+                    .padding(.bottom, 4)
+
                     
                     
                     HStack(spacing: 8) {
@@ -144,7 +139,6 @@ private struct MarqueeSongText: View {
             .font(.system(size: 14, weight: .bold, design: .rounded))
             .frame(alignment: .leading)
             .foregroundStyle(.white)
-        //            .lineLimit(1)
             .fixedSize()
             .padding(.trailing, CGFloat(video.songName.count + video.artistName.count))
             .padding(.leading, 5)
@@ -161,14 +155,11 @@ private struct MarqueeSongText: View {
             .clipped()
             .mask(
                 HStack(spacing: 0) {
-                    // Left Fade (Transparent -> Black)
                     LinearGradient(gradient: Gradient(colors: [.clear, .black]), startPoint: .leading, endPoint: .trailing)
                         .frame(width: 10)
                     
-                    // Middle (Solid Black = Fully Visible)
                     Rectangle().fill(Color.black)
                     
-                    // Right Fade (Black -> Transparent)
                     LinearGradient(gradient: Gradient(colors: [.black, .clear]), startPoint: .leading, endPoint: .trailing)
                         .frame(width: 10) // The length of the fade
                 }
@@ -206,7 +197,7 @@ struct MarqueeRenderer: TextRenderer {
 }
 
 struct FlowLayout: Layout {
-    var spacing: CGFloat = 8 // Gap between items
+    var spacing: CGFloat = 8
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let frames = arrangeSubviews(proposal: proposal, subviews: subviews)
@@ -224,7 +215,6 @@ struct FlowLayout: Layout {
         }
     }
 
-    // Helper to calculate positions
     private func arrangeSubviews(proposal: ProposedViewSize, subviews: Subviews) -> [CGRect] {
         var frames: [CGRect] = []
         var x: CGFloat = 0
@@ -235,7 +225,6 @@ struct FlowLayout: Layout {
         for view in subviews {
             let size = view.sizeThatFits(.unspecified)
             
-            // If this item pushes past the edge, move to next line (reset X, increase Y)
             if x + size.width > maxWidth {
                 x = 0
                 y += maxHeight + spacing
@@ -244,7 +233,6 @@ struct FlowLayout: Layout {
             
             frames.append(CGRect(origin: CGPoint(x: x, y: y), size: size))
             
-            // Advance X pointer for the next item
             x += size.width + spacing
             maxHeight = max(maxHeight, size.height)
         }

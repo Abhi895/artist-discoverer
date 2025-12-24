@@ -8,6 +8,9 @@ class VideoManager: ObservableObject {
 
     @Published var currentIndex: Int = 0
     @Published var paused: Bool = false
+    @Published var isMuted: Bool = false
+    @Published var returningIndex: Int = 0
+    @Published var useFollowing: Bool = false
     
     static let emptyPlayer = AVPlayer()
 
@@ -15,13 +18,20 @@ class VideoManager: ObservableObject {
     var loopers: [Int:AVPlayerLooper] = [:]
         
     @Published var videos: [Video] = []
+    @Published var following: [Video] = []
     
     init() {
         videos = generateVideos()
+        
+//        print(videos)
+        
+        
         setupAudioSession()
         preloadAsync(index: 0)
         preloadAsync(index: 1)
     }
+    
+    
     
     func setupAudioSession() {
         do {
@@ -29,6 +39,29 @@ class VideoManager: ObservableObject {
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {
             print("Failed to set audio session: \(error)")
+        }
+    }
+    
+    func toggleMute() {
+        isMuted.toggle()
+        // Apply to all currently loaded players immediately
+        players.values.forEach { $0.isMuted = isMuted }
+    }
+    
+    func pauseAllVideos() {
+        
+        if let currentPlayer = players[currentIndex] {
+            currentPlayer.pause()
+            paused = true
+        }
+        
+        for (index, player) in players {
+            if index != currentIndex {
+                player.pause()
+                player.removeAllItems()
+                loopers[index] = nil
+                players[index] = nil
+            }
         }
     }
     
@@ -44,75 +77,91 @@ class VideoManager: ObservableObject {
     
     
     func onScroll(to index: Int) {
-        guard currentIndex != index else { return }
-    
+        print("SCROLLING")
+        print("currentIndex - \(currentIndex)")
+        print("index - \(index)")
+        guard currentIndex != index || index == 0 else { return }
+        print("PASSED CHECK")
         if let oldPlayer = players[currentIndex] {
             oldPlayer.pause()
         }
 
-        // Play current
         currentIndex = index
         paused = false
         
         if let player = players[index] {
             player.playImmediately(atRate: 1.0)
         } else {
-            // WORST CASE: User scrolled too fast. Force load it.
-            // Your preloadAsync's internal check "if self.currentIndex == index" will auto-play it when done.
             print("⚠️ Video \(index) not ready. Loading...")
             preloadAsync(index: index)
         }
 
-        // 3. Preload neighbors (Optimized)
-        // We use a background task to prepare next items so main thread doesn't hitch
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             self.preloadAsync(index: index + 1)
             self.preloadAsync(index: index - 1)
         }
-        
-        
-        //        for i in (index-2)...(index+2) {
-        //            _ = getPlayer(at: i)
-        //        }
-        //
-        //        players.values.forEach { $0.pause() }
-        //        players[index]?.playImmediately(atRate: 1.0)
 
         cleanUp(currentIndex: index)
     }
-
-//    func getPlayer(at index: Int) -> AVPlayer? {
-//        guard index >= 0 && index < videos.count else { return nil }
-//
-//        if let player = players[index] { return player }
-//        guard let url = videos[index].url else { return nil }
-//        
-//        let asset = AVURLAsset(url: url)
-//        let item = AVPlayerItem(asset: asset)
-//        
-//        let player = AVQueuePlayer(playerItem: item)
-//        
-//        player.automaticallyWaitsToMinimizeStalling = false
-//        player.actionAtItemEnd = .none // Crucial for smooth looping
-//
-//        loopers[index] = AVPlayerLooper(player: player, templateItem: item)
-//        players[index] = player
-//        
-//        return player
-//    }
+    
+    func resumePlayback() {
+        guard let player = players[currentIndex] else {
+            preloadAsync(index: currentIndex)
+            return
+        }
+        
+        if !paused {
+            player.playImmediately(atRate: 1.0)
+        }
+    }
+    func resetFeed(newIndex: Int?) {
+        // 1. Pause and Destroy EVERYTHING
+        players.values.forEach { $0.pause() }
+        players.values.forEach { $0.removeAllItems() }
+        loopers.values.forEach { $0.disableLooping() }
+        
+        players.removeAll()
+        loopers.removeAll()
+        
+        currentIndex = newIndex ?? 0 // Or specific index if restoring state
+        paused = false
+        
+        // 3. Start Fresh
+        // We trigger the first load immediately so the user sees something
+        preloadAsync(index: newIndex ?? 0)
+        
+        // Preload next in background
+        Task { [weak self] in
+            if let ind = newIndex {
+                print("PRELOADING")
+                
+                self?.preloadAsync(index: ind < self!.videos.count - 1 ? ind + 1: 0)
+                
+            } else {
+                print("PRELOAIDNG AT 1")
+                self?.preloadAsync(index: 1)
+                
+            }
+        }
+    }
     
     private func preloadAsync(index: Int) {
-        guard index >= 0 && index < videos.count else { return }
-        guard players[index] == nil else { return }  // Early exit optimisation
-        guard let url = videos[index].url else { return }
+        let currVideos = useFollowing ? following : videos
+//        print(currVideos)
+        print("ATtEMPTED TO PRELOAD AT: \(index)")
+        
+        guard index >= 0 && index < currVideos.count else { return }
+        print("PRELOADING WITH \(currVideos[index])")
+
+        guard players[index] == nil else { return }
+        guard let url = currVideos[index].url else { return }
 
         let asset = AVURLAsset(url: url)
 
         Task { [weak self] in
             guard let self else { return }
             do {
-                // Use the modern async property loading API introduced in iOS 16
                 let isPlayable = try await asset.load(.isPlayable)
                 guard isPlayable else {
                     print("Failed to load video at \(index): asset not playable")
@@ -124,6 +173,7 @@ class VideoManager: ObservableObject {
 
                     let item = AVPlayerItem(asset: asset)
                     let player = AVQueuePlayer(playerItem: item)
+                    player.isMuted = self.isMuted
                     player.automaticallyWaitsToMinimizeStalling = false
                     player.actionAtItemEnd = .none
 
@@ -176,7 +226,6 @@ class VideoManager: ObservableObject {
         return videos
     }
     
-
 }
 
 //protocol FeedManager {

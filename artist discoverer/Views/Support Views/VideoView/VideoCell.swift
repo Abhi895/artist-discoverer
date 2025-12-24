@@ -11,18 +11,14 @@ import AVKit
 struct VideoCell: View {
     let index: Int
     let video: Video
+    let preview: Bool
+    let following: Bool
     
     @State private var showLikeBurst = false
     @State private var tapLocation: CGPoint = .init(x: 200, y: 400)
     @State private var likeBurstPulse: Bool = false
         
     @ObservedObject var videoManager = VideoManager.shared
-    
-    private static let gradient = LinearGradient(
-        colors: [.clear, .black.opacity(0.6)],
-        startPoint: .top,
-        endPoint: .bottom
-    )
     
     var body: some View {
         ZStack {
@@ -32,9 +28,16 @@ struct VideoCell: View {
                 VideoView(player: player)
             }
             
-            Self.gradient
+            LinearGradient(colors: [.clear, .black.opacity(0.6)], startPoint: .top, endPoint: .bottom)
             
-            if videoManager.paused {
+            if !preview {
+//                ActionButtonsView(liked: following ? $videoManager.videos[videoManager.videos.firstIndex(of: videoManager.videos.filter(\.followingArtist)[index])!].liked : $videoManager.videos[index].liked)
+                ActionButtonsView(liked: following ? $videoManager.following[index].liked : $videoManager.videos[index].liked)
+
+                VideoInfoView(following: following ? $videoManager.following[index].followingArtist : $videoManager.videos[index].followingArtist, currVideo: video)
+            }
+            
+            if videoManager.paused && !preview {
                 Image(systemName: "play.fill")
                     .font(.system(size: 50))
                     .foregroundColor(.white.opacity(0.6))
@@ -52,38 +55,45 @@ struct VideoCell: View {
                      .transition(.scale.combined(with: .opacity))
                      .opacity(showLikeBurst ? 1 : 0)
                      .animation(.spring(response: 0.25, dampingFraction: 0.6), value: likeBurstPulse)
-             }
+            }
             
-            ActionButtonsView(liked: $videoManager.videos[index].liked)
-
-            VideoInfoView(currVideo: video)
-//                .padding(.bottomLeading, 5)
-
         }
+        
         .onTapGesture {
-            print(index)
-            videoManager.togglePlay(at: index)
+            
+            if !preview {
+                videoManager.togglePlay(at: index)
+            }
         }
         .onTapGesture(count: 2) {
-            // Ensure baseline state before animating in
-            showLikeBurst = false
-            likeBurstPulse = false
-
-            withAnimation(.spring(response: 0.25, dampingFraction: 0.7, blendDuration: 0.1)) {
-                videoManager.videos[index].liked = true
-            }
-
-            // Defer turning the burst on to the next run loop for reliable first-time animation
-            DispatchQueue.main.async {
-                showLikeBurst = true
-                likeBurstPulse = true
-
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                    likeBurstPulse = false
+            
+            if !preview {
+                // Ensure baseline state before animating in
+                showLikeBurst = false
+                likeBurstPulse = false
+                
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.7, blendDuration: 0.1)) {
+                    if following {
+                        videoManager.following[index].liked = true
+                    } else {
+                        videoManager.videos[index].liked = true
+                        
+                    }
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                    withAnimation(.easeOut(duration: 0.25)) {
-                        showLikeBurst = false
+                
+                // Defer turning the burst on to the next run loop for reliable first-time animation
+                DispatchQueue.main.async {
+                    showLikeBurst = true
+                    likeBurstPulse = true
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        likeBurstPulse = false
+                    }
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                        withAnimation(.easeOut(duration: 0.25)) {
+                            showLikeBurst = false
+                        }
                     }
                 }
             }
