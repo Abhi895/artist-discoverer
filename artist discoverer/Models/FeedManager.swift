@@ -22,13 +22,28 @@ class FeedManager: ObservableObject {
 
     // MARK: - Feed Lifecycle
     
+    // In VideoManager.swift
+
     func createFeed(id: String, videos: [Video], startIndex: Int = 0, autoPlay: Bool = true) {
-        if var existing = feeds[id] {
-            existing.videos = videos
-            feeds[id] = existing
-            return
+        
+        // 1. Check if feed exists
+        if let existing = feeds[id] {
+            
+            // 2. STALENESS CHECK: Are the videos the same?
+            // We compare the IDs. If they match, the feed is good. We do nothing.
+            let existingIDs = existing.videos.map { $0.id }
+            let newIDs = videos.map { $0.id }
+            
+            if existingIDs == newIDs {
+                return // Feed is up to date!
+            }
+            
+            // 3. If they differ (e.g. you unliked a song), we must destroy the old stale feed
+            print("⚠️ Feed '\(id)' is stale. Refreshing...")
+            destroyFeed(id: id)
         }
         
+        // 4. Create fresh feed (This runs if feed didn't exist OR if we just destroyed it)
         print("✨ Creating Feed: \(id)")
         let newFeed = FeedContext(id: id, videos: videos, currentIndex: startIndex)
         feeds[id] = newFeed

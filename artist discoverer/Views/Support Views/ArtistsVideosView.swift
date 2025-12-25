@@ -50,7 +50,7 @@ struct ArtistsVideosView: View {
                         .padding(4)
                         
                         // 3. Navigation Link passes the FeedID
-                        NavigationLink(value: ActiveVideos(index: index, feedID: feedID)) {
+                        NavigationLink(value: ActiveFeed(index: index, feedID: feedID)) {
                             VideoCard(video: video, index: index, feedID: feedID)
                         }
                     }

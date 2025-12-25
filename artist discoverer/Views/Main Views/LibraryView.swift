@@ -65,14 +65,14 @@ struct LibraryView: View {
                 if artists {
                     ArtistsView(selectedTab: $selectedTab)
                 } else {
-                    SongsView()
+                    SongsView(selectedTab: $selectedTab)
                 }
             }
             .frame(maxHeight: .infinity)
             .background(Color.tabBarBackground)
             // Handle Navigation for BOTH Artists and Songs views here
-            .navigationDestination(for: ActiveVideos.self) { activeVideo in
-                SongsVideosView(activeVideos: activeVideo)
+            .navigationDestination(for: ActiveFeed.self) { activeVideo in
+                SongsVideosView(activeFeed: activeVideo)
             }
         }
     }

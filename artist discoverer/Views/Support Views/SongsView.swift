@@ -11,40 +11,32 @@ struct SongsView: View {
     ]
     
     @ObservedObject private var feedManager = FeedManager.shared
+    @State private var likedVideos: [Video] = []
+    @Binding var selectedTab: Tab
     
-    // Define a unique ID for this feed
     private let feedID = "songs"
     
-    // Computed property to get liked videos from the source of truth
-
+    
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            
-            // Header Stats
-            HStack {
-                Text("\(feedManager.masterVideos.count) Liked Songs")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-                Spacer()
-                Image(systemName: "line.3.horizontal.decrease.circle")
-                    .foregroundColor(.white)
-            }
-            .padding(.horizontal)
-            .padding(.bottom, 10)
-            
-            ScrollView(showsIndicators: false) {
-                // Check if we have liked videos
-                if !feedManager.masterVideos.isEmpty {
+        VStack(alignment: .center, spacing: 0) {
+            if !likedVideos.isEmpty {
+                
+                HStack {
+                    Text("\(likedVideos.count) Liked Songs")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                    Spacer()
+                    Image(systemName: "line.3.horizontal.decrease.circle")
+                        .foregroundColor(.white)
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 10)
+                
+                ScrollView(showsIndicators: false) {
                     LazyVGrid(columns: columns, spacing: 1) {
-                        // Iterate through the liked videos
-                        ForEach(Array(feedManager.masterVideos.enumerated()), id: \.offset) { index, video in
-                            
-                            // Navigation Link passing the Feed ID
-                            NavigationLink(value: ActiveVideos(index: index, feedID: feedID)) {
-                                
-                                // Thumbnail Card
+                        ForEach(Array(likedVideos.enumerated()), id: \.offset) { index, video in
+                            NavigationLink(value: ActiveFeed(index: index, feedID: feedID)) {
                                 ZStack(alignment: .bottomLeading) {
-                                    // Use the existing thumbnail generator
                                     if let url = video.url {
                                         VideoThumbnail(videoURL: url)
                                             .aspectRatio(9/16, contentMode: .fill)
@@ -55,41 +47,61 @@ struct SongsView: View {
                                             .aspectRatio(9/16, contentMode: .fill)
                                     }
                                     
-                                    // Gradient Overlay
                                     LinearGradient(
                                         colors: [.clear, .black.opacity(0.4)],
                                         startPoint: .center,
                                         endPoint: .bottom
                                     )
                                     
-                                    // Play Icon Overlay
                                     Image(systemName: "play.fill")
                                         .font(.system(size: 10))
                                         .foregroundColor(.white)
                                         .padding(6)
                                 }
                                 .aspectRatio(9/16, contentMode: .fit)
+                                .id(video.id)
                             }
                         }
                     }
-                } else {
-                    // Empty State
-                    VStack(spacing: 20) {
-                        Spacer()
-                        Image(systemName: "heart.slash")
-                            .font(.system(size: 50))
-                            .foregroundColor(.gray)
-                        Text("No liked songs yet")
-                            .foregroundColor(.gray)
-                        Spacer()
-                    }
-                    .frame(height: 300)
                 }
+            } else {
+                Spacer()
+
+                VStack(spacing: 10) {
+                    Image(systemName: "music.note")
+                        .font(.system(size: 56, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.7))
+                    Text("You haven't liked any songs yet")
+                        .font(.title3.weight(.semibold))
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.white)
+                    Text("Like a song to easily come back to it whenever you want")
+                        .font(.footnote)
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.white.opacity(0.7))
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            selectedTab = .home
+                        }
+                    } label: {
+                        Text("Discover songs")
+                            .font(.headline)
+                            .frame(width: 200)
+                            .padding(.vertical, 12)
+                            .foregroundStyle(.white)
+                    }
+                    .glassEffect(.clear)
+                    .padding()
+                    
+                }
+                Spacer()
+
             }
         }
         .background(Color.tabBarBackground)
         .onAppear {
-            feedManager.createFeed(id: feedID, videos: feedManager.masterVideos, autoPlay: false)
+            self.likedVideos = feedManager.masterVideos.filter { $0.liked }
+            feedManager.createFeed(id: feedID, videos: likedVideos, autoPlay: false)
             feedManager.destroyFeed(id: "artists")
         }
     }
