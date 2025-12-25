@@ -64,11 +64,6 @@ struct ArtistsVideosView: View {
         }
         .onAppear {
 
-            let followedVideos = feedManager.masterVideos.filter{$0.followingArtist}
-            print(followedVideos)
-            feedManager.createFeed(id: "artists", videos: followedVideos)
-            feedManager.destroyFeed(id: "songs")
-            
  
         }
         .onPreferenceChange(VideoFrameKey.self) { preferences in
