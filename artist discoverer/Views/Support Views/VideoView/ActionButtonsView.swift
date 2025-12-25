@@ -40,7 +40,7 @@ struct ActionButtonsView: View {
                             .font(.system(size: 26))
                             .scaleEffect(likePulse ? 1.35 : 1.0)
                             .rotationEffect(.degrees(Double(likePulse ? Int.random(in: -10...10) : 0)))
-                            .shadow(color: (liked ? Color.red : Color.black).opacity(0.6), radius: 14)
+                            .shadow(color: (liked ? Color.red : Color.black).opacity(0.6), radius: 10)
                             .animation(.spring(response: 0.25, dampingFraction: 0.6), value: likePulse)
                             .animation(.easeInOut(duration: 0.15), value: liked)
                     }

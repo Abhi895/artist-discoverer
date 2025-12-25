@@ -20,9 +20,8 @@ struct SongsView: View {
     var body: some View {
         VStack(alignment: .center, spacing: 0) {
             if !likedVideos.isEmpty {
-                
                 HStack {
-                    Text("\(likedVideos.count) Liked Songs")
+                    Text(likedVideos.count == 1 ? "1 Liked Song" : "\(likedVideos.count) Liked Songs")
                         .font(.subheadline)
                         .foregroundColor(.gray)
                     Spacer()

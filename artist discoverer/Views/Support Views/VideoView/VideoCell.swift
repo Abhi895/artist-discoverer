@@ -10,8 +10,8 @@ import AVKit
 struct VideoCell: View {
     let index: Int
     let video: Video
-    let feedID: String // <--- Scalable ID
-    let preview: Bool  // Added this missing prop from your code
+    let feedID: String
+    let preview: Bool
     
     @ObservedObject var videoManager = FeedManager.shared
     @State private var showLikeBurst = false
@@ -38,7 +38,6 @@ struct VideoCell: View {
         ZStack {
             Color.black
             
-            // 1. Only get player for THIS feed
             if let player = videoManager.getPlayer(feedID: feedID, index: index) {
                 VideoView(player: player)
             }
@@ -46,9 +45,8 @@ struct VideoCell: View {
             LinearGradient(colors: [.clear, .black.opacity(0.6)], startPoint: .top, endPoint: .bottom)
             
             if !preview {
-                // 2. Pass the syncing binding
                 ActionButtonsView(liked: likeBinding)
-                VideoInfoView(following: followBinding, currVideo: video, feedID: feedID)
+                VideoInfoView(following: followBinding, currVideo: video, currIndex: index, feedID: feedID)
             }
             
             if showLikeBurst {

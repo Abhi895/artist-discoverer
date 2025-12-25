@@ -13,13 +13,15 @@ struct VideoInfoView: View {
     @State private var offset: Double = 0.0
     
     var currVideo: Video?
-    var feedID: String // <--- 1. Accept Feed ID
+    var currIndex: Int
+    var feedID: String
     
     var body: some View {
         Group {
             if let currVideo {
                 SongInfoView(
                     video: currVideo,
+                    index: currIndex,
                     feedID: feedID, // <--- 2. Pass it down
                     offset: $offset,
                     following: $following
@@ -28,13 +30,13 @@ struct VideoInfoView: View {
                 VStack { Spacer() }
             }
         }
-        .padding(.leading, 15)
-        .padding(.bottom, 15)
+
     }
 }
 
 private struct SongInfoView: View {
     let video: Video
+    let index: Int
     let feedID: String // <--- 3. Accept Feed ID
     
     @ObservedObject private var feedManager = FeedManager.shared
@@ -43,7 +45,7 @@ private struct SongInfoView: View {
     
     // Computed property to check if THIS video is the one currently playing in THIS feed
     var isCurrentVideo: Bool {
-        return feedManager.feeds[feedID]?.currentIndex == video.id
+        return feedManager.feeds[feedID]?.currentIndex == index
     }
     
     var body: some View {
@@ -86,7 +88,6 @@ private struct SongInfoView: View {
                             .foregroundStyle(.white)
                             .frame(width: 14, height: 14)
                         
-                        // 4. Use the context-aware check for scrolling text
                         if isCurrentVideo {
                             MarqueeSongText(video: video, offset: $offset)
                         } else {
@@ -119,7 +120,8 @@ private struct SongInfoView: View {
                     }
                 }
                 .frame(width: 250, alignment: .leading)
-                .clipped()
+                .padding(.leading, 15)
+                .padding(.bottom, 15)
                 
                 Spacer()
             }

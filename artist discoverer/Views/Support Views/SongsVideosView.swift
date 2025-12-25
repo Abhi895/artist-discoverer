@@ -2,13 +2,15 @@ import SwiftUI
 import AVKit
 
 struct SongsVideosView: View {
-        
+    
     @ObservedObject private var feedManager = FeedManager.shared
     @State private var scrollID: Int?
-
+    //    @Binding var header: String
+    
     let activeFeed: ActiveFeed
-
+    
     var body: some View {
+        
         
         ZStack {
             
@@ -30,16 +32,20 @@ struct SongsVideosView: View {
                 }
                 .scrollTargetLayout()
             }
-        
-            VStack(alignment: .center) {
-                Text(activeFeed.feedID == "songs" ? "LIKED SONGS" : "LATEST VIDEOS")
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.6))
-                    .padding()
-                Spacer()
-            }
-
+            
+            //            VStack(alignment: .center) {
+            //                Text(activeFeed.feedID == "songs" ? "LIKED SONGS" : "LATEST VIDEOS")
+            //                    .navigationTitle(<#T##title: Text##Text#>)
+            //                    .font(.system(size: 20, weight: .semibold, design: .default))
+            //                    .foregroundStyle(.white.opacity(0.6))
+            //                    .frame(maxWidth: .infinity)
+            //                    .padding(-20)
+            //                    .shadow(color: .black, radius: 15)
+            //                Spacer()
+            //            }
+            
         }
+        .ignoresSafeArea(.all)
         .scrollIndicators(.hidden)
         .scrollTargetBehavior(.paging)
         .scrollPosition(id: $scrollID)
@@ -49,6 +55,7 @@ struct SongsVideosView: View {
             }
         }
         .onAppear {
+            //                self.header = activeFeed.feedID == "songs" ?  "LIKED SONGS" : "LATEST VIDEOS"
             scrollID = activeFeed.index
             feedManager.onScroll(to: activeFeed.index, feedID: activeFeed.feedID)
             
@@ -61,7 +68,6 @@ struct SongsVideosView: View {
                 feedManager.pauseAllFeeds()
             }
         }
-        .ignoresSafeArea(.all)
     }
 }
 struct ActiveFeed: Hashable {

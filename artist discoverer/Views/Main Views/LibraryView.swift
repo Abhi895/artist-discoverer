@@ -59,7 +59,7 @@ struct LibraryView: View {
                     }
                 }
                 .frame(alignment: .center)
-                .padding(.bottom, 10)
+                .padding(.vertical, 10)
                 
                 // --- Content ---
                 if artists {
@@ -70,7 +70,6 @@ struct LibraryView: View {
             }
             .frame(maxHeight: .infinity)
             .background(Color.tabBarBackground)
-            // Handle Navigation for BOTH Artists and Songs views here
             .navigationDestination(for: ActiveFeed.self) { activeVideo in
                 SongsVideosView(activeFeed: activeVideo)
             }

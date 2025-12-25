@@ -50,7 +50,6 @@ struct ArtistsVideosView: View {
                         }
                         .padding(4)
                         
-                        // 3. Navigation Link passes the FeedID
                         NavigationLink(value: ActiveFeed(index: index, feedID: feedID)) {
                             VideoCard(video: video, index: index, feedID: feedID)
                                 .allowsHitTesting(!isActive)
@@ -60,25 +59,20 @@ struct ArtistsVideosView: View {
                     .padding()
                 }
             } else {
-                ProgressView()
-                    .padding()
+                Spacer()
             }
+        }
+        .onAppear {
+
+            let followedVideos = feedManager.masterVideos.filter{$0.followingArtist}
+            print(followedVideos)
+            feedManager.createFeed(id: "artists", videos: followedVideos)
+            feedManager.destroyFeed(id: "songs")
+            
+ 
         }
         .onPreferenceChange(VideoFrameKey.self) { preferences in
             detectActiveVideo(preferences: preferences)
-        }
-        .onAppear {
-            
-            feedManager.pauseAllFeeds()  // Stop any lingering audio first
-
-            let followedVideos = feedManager.masterVideos.filter{$0.followingArtist}
-            feedManager.createFeed(id: feedID, videos: followedVideos)
-            feedManager.destroyFeed(id: "songs")
-            
-            // 5. Ensure Previews are Muted
-            if !feedManager.isMuted {
-                feedManager.toggleMute()
-            }
         }
     }
     

@@ -24,9 +24,7 @@ class FeedManager: ObservableObject {
     // In VideoManager.swift
     
     func createFeed(id: String, videos: [Video], startIndex: Int = 0, autoPlay: Bool = true) {
-        
-        print(videos)
-        
+                
         if videos.isEmpty {
             print("🧹 List is empty. Removing feed: \(id)")
             destroyFeed(id: id)
@@ -191,9 +189,11 @@ class FeedManager: ObservableObject {
     
     func toggleMute() {
         isMuted.toggle()
+        
+        print(isMuted)
         // Apply to ALL videoManager.feeds
-        for key in feeds.keys {
-            feeds[key]?.players.values.forEach { $0.isMuted = isMuted }
+        for feed in feeds.values {
+            feed.players.values.forEach { $0.isMuted = isMuted }
         }
     }
     
