@@ -1,5 +1,5 @@
 //
-//  VideoRowView.swift
+//  VideoCell.swift
 //  artist discoverer
 //
 //  Simplified - gets player from VideoManager instead of creating its own
@@ -8,98 +8,83 @@
 import SwiftUI
 import AVKit
 
+
 struct VideoCell: View {
     let index: Int
     let video: Video
-    let preview: Bool
-    let following: Bool
+    let feedID: String // <--- Scalable ID
+    let preview: Bool  // Added this missing prop from your code
     
-    @State private var showLikeBurst = false
-    @State private var tapLocation: CGPoint = .init(x: 200, y: 400)
-    @State private var likeBurstPulse: Bool = false
-        
     @ObservedObject var videoManager = VideoManager.shared
+    @State private var showLikeBurst = false
+    @State private var tapLocation: CGPoint = .zero
+    
+    // The Binding that syncs everything
+    private var likeBinding: Binding<Bool> {
+        Binding(
+            get: { videoManager.isLiked(videoId: video.id, feedID: feedID) },
+            set: { _ in videoManager.toggleLike(videoId: video.id) }
+        )
+    }
+    
+    private var followBinding: Binding<Bool> {
+        Binding(
+            get: { videoManager.isFollowing(videoId: video.id, feedID: feedID) },
+            set: { _ in videoManager.toggleFollow(artistName: video.artistName) }
+        )
+    }
     
     var body: some View {
         ZStack {
             Color.black
             
-            if let player = videoManager.players[index] {
+            // 1. Only get player for THIS feed
+            if let player = videoManager.getPlayer(feedID: feedID, index: index) {
                 VideoView(player: player)
             }
             
             LinearGradient(colors: [.clear, .black.opacity(0.6)], startPoint: .top, endPoint: .bottom)
             
             if !preview {
-//                ActionButtonsView(liked: following ? $videoManager.videos[videoManager.videos.firstIndex(of: videoManager.videos.filter(\.followingArtist)[index])!].liked : $videoManager.videos[index].liked)
-                ActionButtonsView(liked: following ? $videoManager.following[index].liked : $videoManager.videos[index].liked)
-
-                VideoInfoView(following: following ? $videoManager.following[index].followingArtist : $videoManager.videos[index].followingArtist, currVideo: video)
+                // 2. Pass the syncing binding
+                ActionButtonsView(liked: likeBinding)
+                VideoInfoView(following: followBinding, currVideo: video, feedID: feedID)
             }
             
-            if videoManager.paused && !preview {
+            if showLikeBurst {
+                Image(systemName: "heart.fill")
+                    .font(.system(size: 100))
+                    .foregroundStyle(.red)
+                    .position(tapLocation)
+            }
+            
+            if video.paused && !preview {
                 Image(systemName: "play.fill")
                     .font(.system(size: 50))
                     .foregroundColor(.white.opacity(0.6))
                     .shadow(color: .black, radius: 12, y: 4)
             }
-            
-            if showLikeBurst {
-                 Image(systemName: "heart.fill")
-                     .font(.system(size: 120))
-                     .foregroundStyle(.red)
-                     .scaleEffect(likeBurstPulse ? 1.25 : 0.9)
-                     .rotationEffect(.degrees(likeBurstPulse ? Double(Int.random(in: -10...10)) : 0))
-                     .shadow(color: .black.opacity(0.4), radius: likeBurstPulse ? 14 : 10)
-                     .position(tapLocation)
-                     .transition(.scale.combined(with: .opacity))
-                     .opacity(showLikeBurst ? 1 : 0)
-                     .animation(.spring(response: 0.25, dampingFraction: 0.6), value: likeBurstPulse)
-            }
-            
         }
-        
         .onTapGesture {
-            
-            if !preview {
-                videoManager.togglePlay(at: index)
-            }
+            if !preview { videoManager.togglePlay(feedID: feedID, index: index) }
         }
-        .onTapGesture(count: 2) {
-            
+        .onTapGesture(count: 2) { location in
             if !preview {
-                // Ensure baseline state before animating in
-                showLikeBurst = false
-                likeBurstPulse = false
-                
-                withAnimation(.spring(response: 0.25, dampingFraction: 0.7, blendDuration: 0.1)) {
-                    if following {
-                        videoManager.following[index].liked = true
-                    } else {
-                        videoManager.videos[index].liked = true
-                        
+                tapLocation = location
+                withAnimation {
+                    if !video.liked {
+                        videoManager.toggleLike(videoId: video.id)
                     }
-                }
-                
-                // Defer turning the burst on to the next run loop for reliable first-time animation
-                DispatchQueue.main.async {
                     showLikeBurst = true
-                    likeBurstPulse = true
-                    
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                        likeBurstPulse = false
-                    }
-                    
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                        withAnimation(.easeOut(duration: 0.25)) {
-                            showLikeBurst = false
-                        }
-                    }
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    withAnimation { showLikeBurst = false }
                 }
             }
         }
     }
 }
+
 
 struct VideoView: UIViewRepresentable {
     let player: AVPlayer

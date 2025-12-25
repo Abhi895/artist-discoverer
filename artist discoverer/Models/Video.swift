@@ -17,6 +17,7 @@ struct Video: Hashable, Equatable {
     var liked: Bool = false
     var saved: Bool = false
     var followingArtist: Bool = false
+    var paused: Bool = false
     
 
 }

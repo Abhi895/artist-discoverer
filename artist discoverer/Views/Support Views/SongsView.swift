@@ -1,14 +1,9 @@
-//
-//  SongsView.swift
-//  artist discoverer
-//
-//  Grid view of liked/saved songs
-//
-
 import SwiftUI
 import AVKit
 
 struct SongsView: View {
+    
+    // Grid Layout
     let columns = [
         GridItem(.flexible(), spacing: 1),
         GridItem(.flexible(), spacing: 1),
@@ -17,14 +12,17 @@ struct SongsView: View {
     
     @ObservedObject private var videoManager = VideoManager.shared
     
-    @State var videoURLs: [URL] = []
+    // Define a unique ID for this feed
+    private let feedID = "songs"
     
+    // Computed property to get liked videos from the source of truth
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             
             // Header Stats
             HStack {
-                Text("\(videoURLs.count) Liked Songs")
+                Text("\(videoManager.masterVideos.count) Liked Songs")
                     .font(.subheadline)
                     .foregroundColor(.gray)
                 Spacer()
@@ -35,44 +33,71 @@ struct SongsView: View {
             .padding(.bottom, 10)
             
             ScrollView(showsIndicators: false) {
-                LazyVGrid(columns: columns, spacing: 1) {
-                    ForEach(Array(videoURLs.enumerated()), id: \.offset) { index, url in
-                        
-                        NavigationLink(value: ActiveVideos(index: index, urls: videoURLs, following: false)) {
-                            // Thumbnail Card
-                            ZStack(alignment: .bottomLeading) {
-                                VideoThumbnail(videoURL: url)
-                                    .aspectRatio(9/16, contentMode: .fill)
-                                    .frame(minWidth: 0, maxWidth: .infinity)
-                                    .clipped()
+                // Check if we have liked videos
+                if !videoManager.masterVideos.isEmpty {
+                    LazyVGrid(columns: columns, spacing: 1) {
+                        // Iterate through the liked videos
+                        ForEach(Array(videoManager.masterVideos.enumerated()), id: \.offset) { index, video in
+                            
+                            // Navigation Link passing the Feed ID
+                            NavigationLink(value: ActiveVideos(index: index, feedID: feedID)) {
                                 
-                                LinearGradient(
-                                    colors: [.clear, .black.opacity(0.4)],
-                                    startPoint: .center,
-                                    endPoint: .bottom
-                                )
-                                
-                                Image(systemName: "play.fill")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.white)
-                                    .padding(6)
+                                // Thumbnail Card
+                                ZStack(alignment: .bottomLeading) {
+                                    // Use the existing thumbnail generator
+                                    if let url = video.url {
+                                        VideoThumbnail(videoURL: url)
+                                            .aspectRatio(9/16, contentMode: .fill)
+                                            .frame(minWidth: 0, maxWidth: .infinity)
+                                            .clipped()
+                                    } else {
+                                        Color.gray
+                                            .aspectRatio(9/16, contentMode: .fill)
+                                    }
+                                    
+                                    // Gradient Overlay
+                                    LinearGradient(
+                                        colors: [.clear, .black.opacity(0.4)],
+                                        startPoint: .center,
+                                        endPoint: .bottom
+                                    )
+                                    
+                                    // Play Icon Overlay
+                                    Image(systemName: "play.fill")
+                                        .font(.system(size: 10))
+                                        .foregroundColor(.white)
+                                        .padding(6)
+                                }
+                                .aspectRatio(9/16, contentMode: .fit)
                             }
-                            .aspectRatio(9/16, contentMode: .fit)
                         }
                     }
+                } else {
+                    // Empty State
+                    VStack(spacing: 20) {
+                        Spacer()
+                        Image(systemName: "heart.slash")
+                            .font(.system(size: 50))
+                            .foregroundColor(.gray)
+                        Text("No liked songs yet")
+                            .foregroundColor(.gray)
+                        Spacer()
+                    }
+                    .frame(height: 300)
                 }
             }
         }
         .background(Color.tabBarBackground)
         .onAppear {
-            videoURLs = videoManager.generateVideos().compactMap(\.url)
+            // Create the "liked" feed dynamically when the view appears
+            // This prepares the player manager to play these specific videos in order
+            videoManager.createFeed(id: feedID, videos: videoManager.masterVideos)
+            videoManager.destroyFeed(id: "artists")
         }
-  
     }
 }
 
-// MARK: - Async Thumbnail Generator
-
+// MARK: - Async Thumbnail Generator (Kept largely the same, just ensured clean-up)
 struct VideoThumbnail: View {
     let videoURL: URL
     @State private var image: UIImage? = nil
@@ -92,7 +117,9 @@ struct VideoThumbnail: View {
             }
         }
         .onAppear {
-            generateThumbnail()
+            if image == nil { // optimization: don't regenerate if we have it
+                generateThumbnail()
+            }
         }
     }
     
@@ -102,7 +129,8 @@ struct VideoThumbnail: View {
             let generator = AVAssetImageGenerator(asset: asset)
             generator.appliesPreferredTrackTransform = true
             
-            let time = CMTime(seconds: 0.5, preferredTimescale: 60)
+            // Generate from the middle or earlier to catch a good frame
+            let time = CMTime(seconds: 0.0, preferredTimescale: 60)
             
             do {
                 let cgImage = try generator.copyCGImage(at: time, actualTime: nil)
@@ -112,7 +140,7 @@ struct VideoThumbnail: View {
                     self.image = uiImage
                 }
             } catch {
-                print("Failed to generate thumbnail: \(error)")
+                print("Thumbnail generation failed: \(error)")
             }
         }
     }

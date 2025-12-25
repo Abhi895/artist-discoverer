@@ -12,10 +12,13 @@ struct ArtistsView: View {
     @Binding var selectedTab: Tab
     
     @ObservedObject private var videoManager = VideoManager.shared
+    private var followingVideos: [Video] {
+        return videoManager.masterVideos.filter { $0.followingArtist }
+    }
     
     var body: some View {
                 
-        if !videoManager.following.isEmpty {
+        if !followingVideos.isEmpty {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 30) {
                     
@@ -30,9 +33,9 @@ struct ArtistsView: View {
                         
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack {
-                                ForEach(0..<videoManager.following.count, id: \.self) { i in
+                                ForEach(0..<followingVideos.count, id: \.self) { i in
                                     VStack(alignment: .center) {
-                                        Image(videoManager.following[i].artistName.lowercased())
+                                        Image(followingVideos[i].artistName.lowercased())
                                             .resizable()
                                             .scaledToFill()
                                             .frame(width: 80, height: 80)

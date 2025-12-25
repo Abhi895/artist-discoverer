@@ -13,12 +13,14 @@ struct VideoInfoView: View {
     @State private var offset: Double = 0.0
     
     var currVideo: Video?
+    var feedID: String // <--- 1. Accept Feed ID
     
     var body: some View {
         Group {
             if let currVideo {
                 SongInfoView(
                     video: currVideo,
+                    feedID: feedID, // <--- 2. Pass it down
                     offset: $offset,
                     following: $following
                 )
@@ -33,10 +35,16 @@ struct VideoInfoView: View {
 
 private struct SongInfoView: View {
     let video: Video
+    let feedID: String // <--- 3. Accept Feed ID
+    
     @ObservedObject private var videoManager = VideoManager.shared
     @Binding var offset: Double
     @Binding var following: Bool
     
+    // Computed property to check if THIS video is the one currently playing in THIS feed
+    var isCurrentVideo: Bool {
+        return videoManager.feeds[feedID]?.currentIndex == video.id
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
@@ -49,12 +57,11 @@ private struct SongInfoView: View {
                             .foregroundStyle(.white)
                             .minimumScaleFactor(0.8)
                             .lineLimit(1)
+                        
                         Button {
                             withAnimation(.easeInOut(duration: 0.2)) {
-                                
-                                print("FOLLOWING")
                                 following.toggle()
-//                                videoManager.following.append(video)
+                                // TODO: Hook this up to VideoManager.toggleFollow(artistID:) in the future
                             }
                         } label: {
                             ZStack {
@@ -62,28 +69,25 @@ private struct SongInfoView: View {
                                     Image(systemName: "plus.circle")
                                         .font(.system(size: 19))
                                         .foregroundStyle(.white)
-                                        .opacity(1)
                                 } else {
                                     Image(systemName: "checkmark.circle")
                                         .font(.system(size: 19))
                                         .foregroundStyle(.white)
-                                        .opacity(1)
                                 }
                             }
                             .buttonStyle(ShrinkingButton())
-                            
                         }
                     }
                     .padding(.bottom, 4)
 
-                    
                     
                     HStack(spacing: 8) {
                         Image(systemName: "waveform")
                             .foregroundStyle(.white)
                             .frame(width: 14, height: 14)
                         
-                        if video.id == videoManager.currentIndex {
+                        // 4. Use the context-aware check for scrolling text
+                        if isCurrentVideo {
                             MarqueeSongText(video: video, offset: $offset)
                         } else {
                             Text("\(video.songName) - \(video.artistName)")
@@ -108,8 +112,6 @@ private struct SongInfoView: View {
                                     .font(.system(size: 11, weight: .regular , design: .monospaced))
                                     .padding(.horizontal, -2)
                                     .padding(.vertical, -1)
-                                
-                                
                             }
                             .tint(.primary)
                             .buttonStyle(.glass)
@@ -124,6 +126,8 @@ private struct SongInfoView: View {
         }
     }
 }
+
+// MARK: - Subviews (Unchanged)
 
 private struct MarqueeSongText: View {
     let video: Video
@@ -145,6 +149,7 @@ private struct MarqueeSongText: View {
             .textRenderer(MarqueeRenderer(offset: offset, spacing: spacing))
             .onAppear {
                 offset = 0
+                // Use a non-blocking task for animation
                 Task { @MainActor in
                     try? await Task.sleep(nanoseconds: 1_500_000_000)
                     withAnimation(.linear(duration: TimeInterval(Double(video.songName.count + video.artistName.count) * 1.7)).repeatForever(autoreverses: false)) {
@@ -157,16 +162,13 @@ private struct MarqueeSongText: View {
                 HStack(spacing: 0) {
                     LinearGradient(gradient: Gradient(colors: [.clear, .black]), startPoint: .leading, endPoint: .trailing)
                         .frame(width: 10)
-                    
                     Rectangle().fill(Color.black)
-                    
                     LinearGradient(gradient: Gradient(colors: [.black, .clear]), startPoint: .leading, endPoint: .trailing)
-                        .frame(width: 10) // The length of the fade
+                        .frame(width: 10)
                 }
             )
     }
 }
-
 
 struct MarqueeRenderer: TextRenderer {
     var offset: Double
@@ -180,14 +182,11 @@ struct MarqueeRenderer: TextRenderer {
     func draw(layout: Text.Layout, in context: inout GraphicsContext) {
         for line in layout {
             let cycleDistance = line.typographicBounds.width + spacing
-            
             let moveAmount = offset * cycleDistance
-            
             
             var main = context
             main.translateBy(x: moveAmount, y: 0)
             main.draw(line)
-            
             
             var ghost = context
             ghost.translateBy(x: moveAmount - cycleDistance, y: 0)
