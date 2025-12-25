@@ -227,13 +227,13 @@ class VideoManager: ObservableObject {
     
     func generateVideos() -> [Video] {
         var videos = [
-            Video(artistName: "Demae", songDesc: "Step into the kaleidoscope.", hashtags: ["#neosoul"], songName: "Light"),
-            Video(artistName: "Lloyiso", songDesc: "It’s terrifying when you aren't ready.", hashtags: ["#rnb"], songName: "Scary"),
-            Video(artistName: "JERUB", songDesc: "Gathering 'round the fire.", hashtags: ["#fireside"], songName: "Kumbaya"),
-            Video(artistName: "TYLER LEWIS", songDesc: "Still seeing shadows at the door?", hashtags: ["#rnbpop"], songName: "eventually"),
-            Video(artistName: "PRYVT", songDesc: "Bringing it back to the streets.", hashtags: ["#indiepop"], songName: "PALETTE"),
-            Video(artistName: "Only The Poets", songDesc: "Parking lot sessions.", hashtags: ["#indieband"], songName: "Saké"),
-            Video(artistName: "SUMMER", songDesc: "Late night drives.", hashtags: ["#nightdrive"], songName: "stillxloveyou")
+            Video(artistName: "Demae", songDesc: "Step into the kaleidoscope. 📺✨ 'Light' is a trip through my mind.", hashtags: ["#neosoul", "#retroaesthetic", "#visualart", "#groovy"], songName: "Light"),
+            Video(artistName: "Lloyiso", songDesc: "It's terrifying when you aren't ready for love. 💔 wrote this at midnight.", hashtags: ["#rnbballad", "#emotionalvocals", "#heartbreak", "#soulmusic"], songName: "Scary"),
+            Video(artistName: "JERUB", songDesc: "Gathering 'round the fire with the people you love. 🔥 Finding peace in chaos.", hashtags: ["#fireside", "#acousticvibes", "#soulfulmusic", "#community"], songName: "Kumbaya"),
+            Video(artistName: "TYLER LEWIS", songDesc: "Still seeing shadows at the door? 🚪💔 We're moving on, one step at a time.", hashtags: ["#rnbpop", "#breakupsong", "#movingon", "#newartist"], songName: "eventually"),
+            Video(artistName: "PRYVT", songDesc: "Bringing it back to the streets with this one. Just me and my guitar. 🎸✨", hashtags: ["#indiepop", "#streetperformer", "#chillvibes", "#guitarist"], songName: "PALETTE"),
+            Video(artistName: "Only The Poets", songDesc: "Parking lot sessions turning into core memories. 🚗💨 'Saké' is out now!", hashtags: ["#indieband", "#poprock", "#sake", "#bandlife"], songName: "Saké"),
+            Video(artistName: "SUMMER", songDesc: "Late night drives and memories I can't shake. 🌃🚗 'stillxloveyou' hits different.", hashtags: ["#nightdrive", "#popballad", "#heartbreakanthem", "#citylights"], songName: "stillxloveyou")
         ]
         let urls = Bundle.main.urls(forResourcesWithExtension: "mp4", subdirectory: nil) ?? []
         for i in 0..<min(videos.count, urls.count) { videos[i].id = i; videos[i].url = urls[i] }
