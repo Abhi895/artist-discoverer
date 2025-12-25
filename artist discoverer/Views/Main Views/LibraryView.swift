@@ -5,9 +5,8 @@ struct LibraryView: View {
     @Binding var selectedTab: Tab
     @State var artists: Bool = true
     
-    // We don't necessarily need the videoManager here anymore for logic,
     // but useful if we want to pre-fetch generic data.
-    @ObservedObject private var videoManager = VideoManager.shared
+    @ObservedObject private var feedManager = FeedManager.shared
     
     var body: some View {
         NavigationStack {

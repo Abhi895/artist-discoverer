@@ -3,7 +3,7 @@ import SwiftUI
 struct ArtistsVideosView: View {
     
     @Binding var selectedTab: Tab
-    @ObservedObject private var videoManager = VideoManager.shared
+    @ObservedObject private var feedManager = FeedManager.shared
     
     // 1. Define the unique ID for this specific feed
     private let feedID = "artists"
@@ -12,7 +12,7 @@ struct ArtistsVideosView: View {
         VStack(alignment: .center, spacing: 10) {
             
             // 2. Only render the list if the feed has been created
-            if let feed = videoManager.feeds[feedID] {
+            if let feed = feedManager.feeds[feedID] {
                 
                 ForEach(0..<feed.videos.count, id: \.self) { index in
                     let video = feed.videos[index]
@@ -67,13 +67,13 @@ struct ArtistsVideosView: View {
         }
         .onAppear {
 
-            let followedVideos = videoManager.masterVideos.filter{$0.followingArtist}
-            videoManager.createFeed(id: feedID, videos: followedVideos)
-            videoManager.destroyFeed(id: "songs")
+            let followedVideos = feedManager.masterVideos.filter{$0.followingArtist}
+            feedManager.createFeed(id: feedID, videos: followedVideos)
+            feedManager.destroyFeed(id: "songs")
             
             // 5. Ensure Previews are Muted
-            if !videoManager.isMuted {
-                videoManager.toggleMute()
+            if !feedManager.isMuted {
+                feedManager.toggleMute()
             }
         }
     }
@@ -92,12 +92,12 @@ struct ArtistsVideosView: View {
         }
         
         // 7. Tell Manager to scroll the specific FEED, not the global state
-        if let feed = videoManager.feeds[feedID],
+        if let feed = feedManager.feeds[feedID],
            closestIndex != -1,
            closestIndex != feed.currentIndex {
             
             DispatchQueue.main.async {
-                videoManager.onScroll(to: closestIndex, feedID: feedID)
+                feedManager.onScroll(to: closestIndex, feedID: feedID)
             }
         }
     }

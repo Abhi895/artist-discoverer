@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct VideoInfoView: View {
-    @ObservedObject private var videoManager = VideoManager.shared
+    @ObservedObject private var videoManager = FeedManager.shared
     @Binding var following: Bool
     @State private var offset: Double = 0.0
     
@@ -37,7 +37,7 @@ private struct SongInfoView: View {
     let video: Video
     let feedID: String // <--- 3. Accept Feed ID
     
-    @ObservedObject private var videoManager = VideoManager.shared
+    @ObservedObject private var videoManager = FeedManager.shared
     @Binding var offset: Double
     @Binding var following: Bool
     

@@ -10,7 +10,7 @@ struct SongsView: View {
         GridItem(.flexible(), spacing: 1)
     ]
     
-    @ObservedObject private var videoManager = VideoManager.shared
+    @ObservedObject private var feedManager = FeedManager.shared
     
     // Define a unique ID for this feed
     private let feedID = "songs"
@@ -22,7 +22,7 @@ struct SongsView: View {
             
             // Header Stats
             HStack {
-                Text("\(videoManager.masterVideos.count) Liked Songs")
+                Text("\(feedManager.masterVideos.count) Liked Songs")
                     .font(.subheadline)
                     .foregroundColor(.gray)
                 Spacer()
@@ -34,10 +34,10 @@ struct SongsView: View {
             
             ScrollView(showsIndicators: false) {
                 // Check if we have liked videos
-                if !videoManager.masterVideos.isEmpty {
+                if !feedManager.masterVideos.isEmpty {
                     LazyVGrid(columns: columns, spacing: 1) {
                         // Iterate through the liked videos
-                        ForEach(Array(videoManager.masterVideos.enumerated()), id: \.offset) { index, video in
+                        ForEach(Array(feedManager.masterVideos.enumerated()), id: \.offset) { index, video in
                             
                             // Navigation Link passing the Feed ID
                             NavigationLink(value: ActiveVideos(index: index, feedID: feedID)) {
@@ -89,10 +89,8 @@ struct SongsView: View {
         }
         .background(Color.tabBarBackground)
         .onAppear {
-            // Create the "liked" feed dynamically when the view appears
-            // This prepares the player manager to play these specific videos in order
-            videoManager.createFeed(id: feedID, videos: videoManager.masterVideos)
-            videoManager.destroyFeed(id: "artists")
+            feedManager.createFeed(id: feedID, videos: feedManager.masterVideos, autoPlay: false)
+            feedManager.destroyFeed(id: "artists")
         }
     }
 }

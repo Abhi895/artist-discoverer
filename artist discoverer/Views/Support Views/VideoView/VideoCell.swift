@@ -15,22 +15,22 @@ struct VideoCell: View {
     let feedID: String // <--- Scalable ID
     let preview: Bool  // Added this missing prop from your code
     
-    @ObservedObject var videoManager = VideoManager.shared
+    @ObservedObject var videoManager = FeedManager.shared
     @State private var showLikeBurst = false
     @State private var tapLocation: CGPoint = .zero
     
     // The Binding that syncs everything
     private var likeBinding: Binding<Bool> {
         Binding(
-            get: { videoManager.isLiked(videoId: video.id, feedID: feedID) },
-            set: { _ in videoManager.toggleLike(videoId: video.id) }
+            get: { ActionButtonsManager().isLiked(videoId: video.id, feedID: feedID) },
+            set: { _ in ActionButtonsManager().toggleLike(videoId: video.id) }
         )
     }
     
     private var followBinding: Binding<Bool> {
         Binding(
-            get: { videoManager.isFollowing(videoId: video.id, feedID: feedID) },
-            set: { _ in videoManager.toggleFollow(artistName: video.artistName) }
+            get: { ActionButtonsManager().isFollowing(videoId: video.id, feedID: feedID) },
+            set: { _ in ActionButtonsManager().toggleFollow(artistName: video.artistName) }
         )
     }
     
@@ -73,7 +73,7 @@ struct VideoCell: View {
                 tapLocation = location
                 withAnimation {
                     if !video.liked {
-                        videoManager.toggleLike(videoId: video.id)
+                        ActionButtonsManager().toggleLike(videoId: video.id)
                     }
                     showLikeBurst = true
                 }

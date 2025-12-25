@@ -3,7 +3,7 @@ import AVKit
 
 struct SongsVideosView: View {
         
-    @ObservedObject private var videoManager = VideoManager.shared
+    @ObservedObject private var feedManager = FeedManager.shared
     @State private var scrollID: Int?
 
     // This struct now holds { index: Int, feedID: String }
@@ -14,7 +14,7 @@ struct SongsVideosView: View {
             LazyVStack(spacing: 0) {
                 
                 // 1. Safely unwrap the feed using the ID passed from the previous screen
-                if let feed = videoManager.feeds[activeVideos.feedID] {
+                if let feed = feedManager.feeds[activeVideos.feedID] {
                     
                     ForEach(0..<feed.videos.count, id: \.self) { index in
                         VideoCell(
@@ -36,7 +36,7 @@ struct SongsVideosView: View {
         .onChange(of: scrollID) { _, newIndex in
             if let newIndex {
                 // 2. Scroll the specific feed (Isolated)
-                videoManager.onScroll(to: newIndex, feedID: activeVideos.feedID)
+                feedManager.onScroll(to: newIndex, feedID: activeVideos.feedID)
             }
         }
         .onAppear {
@@ -45,16 +45,16 @@ struct SongsVideosView: View {
             
             // 4. Tell Manager to activate this specific player
             // This grabs the player instance already created by the Artist View
-            videoManager.onScroll(to: activeVideos.index, feedID: activeVideos.feedID)
+            feedManager.onScroll(to: activeVideos.index, feedID: activeVideos.feedID)
             
             // 5. Auto-Unmute when entering full screen (Better UX)
-            if videoManager.isMuted {
-                videoManager.toggleMute()
+            if feedManager.isMuted {
+                feedManager.toggleMute()
             }
         }
         .onDisappear {
             if activeVideos.feedID == "songs" {
-                videoManager.pauseAllFeeds()
+                feedManager.pauseAllFeeds()
             }
         }
         .ignoresSafeArea(.all)

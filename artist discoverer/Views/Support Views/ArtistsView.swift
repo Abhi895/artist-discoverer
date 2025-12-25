@@ -11,10 +11,8 @@ import SwiftUI
 struct ArtistsView: View {
     @Binding var selectedTab: Tab
     
-    @ObservedObject private var videoManager = VideoManager.shared
-    private var followingVideos: [Video] {
-        return videoManager.masterVideos.filter { $0.followingArtist }
-    }
+    @ObservedObject private var feedManager = FeedManager.shared
+    private var followingVideos: [Video] { feedManager.masterVideos.filter {$0.followingArtist} }
     
     var body: some View {
                 
