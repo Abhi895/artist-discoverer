@@ -11,6 +11,8 @@ import AVKit
 struct ActionButtonsManager {
     
     @ObservedObject var videoManager = FeedManager.shared
+    
+    static let shared = ActionButtonsManager()
         
     func toggleLike(videoId: Int) {
         if let idx = videoManager.masterVideos.firstIndex(where: { $0.id == videoId }) {

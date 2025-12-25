@@ -16,6 +16,7 @@ struct ArtistsVideosView: View {
                 
                 ForEach(0..<feed.videos.count, id: \.self) { index in
                     let video = feed.videos[index]
+                    let isActive = feedManager.feeds[feedID]?.currentIndex == index
                     
                     VStack {
                         // Header Section (Artist Info)
@@ -52,12 +53,13 @@ struct ArtistsVideosView: View {
                         // 3. Navigation Link passes the FeedID
                         NavigationLink(value: ActiveFeed(index: index, feedID: feedID)) {
                             VideoCard(video: video, index: index, feedID: feedID)
+                                .allowsHitTesting(!isActive)
                         }
                     }
+                    .opacity(isActive ? 1.0 : 0.4)
                     .padding()
                 }
             } else {
-                // Fallback / Loading state while feed creates
                 ProgressView()
                     .padding()
             }
@@ -66,6 +68,8 @@ struct ArtistsVideosView: View {
             detectActiveVideo(preferences: preferences)
         }
         .onAppear {
+            
+            feedManager.pauseAllFeeds()  // Stop any lingering audio first
 
             let followedVideos = feedManager.masterVideos.filter{$0.followingArtist}
             feedManager.createFeed(id: feedID, videos: followedVideos)
@@ -109,7 +113,7 @@ struct VideoCard: View {
     
     var video: Video
     var index: Int
-    var feedID: String // Added feedID
+    var feedID: String
     
     var body: some View {
         ZStack(alignment: .bottomLeading) {
@@ -126,7 +130,6 @@ struct VideoCard: View {
             .clipShape(RoundedRectangle(cornerRadius: 24))
             .shadow(color: .black.opacity(0.6), radius: 15, y: 10)
             .id(index)
-            .allowsHitTesting(false) // Disable interaction on preview
             .background(GeometryReader { geometry in
                 Color.clear
                     .preference(
@@ -138,7 +141,7 @@ struct VideoCard: View {
             // Metadata Overlay
             VStack(alignment: .leading, spacing: 10) {
                 Text(video.songName)
-                    .font(.system(size: 25, weight: .bold, design: .serif))
+                    .font(.system(size: 25, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                 
                 FlowLayout(spacing: 5) {
@@ -160,7 +163,7 @@ struct VideoCard: View {
         }
         .overlay(
             RoundedRectangle(cornerRadius: 24)
-                .stroke(Color.primary, lineWidth: 0.3)
+                .stroke(Color.primary, lineWidth: 0.4)
         )
     }
 }

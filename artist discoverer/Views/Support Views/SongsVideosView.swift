@@ -30,8 +30,14 @@ struct SongsVideosView: View {
                 }
                 .scrollTargetLayout()
             }
-            
-            Text(activeFeed.feedID == "songs" ? "Liked Songs" : "Latest Videos")
+        
+            VStack(alignment: .center) {
+                Text(activeFeed.feedID == "songs" ? "LIKED SONGS" : "LATEST VIDEOS")
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.6))
+                    .padding()
+                Spacer()
+            }
 
         }
         .scrollIndicators(.hidden)

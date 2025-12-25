@@ -24,7 +24,6 @@ struct CustomTabBar: View {
                     Spacer()
                     
                     Button(action: {
-                        // Add a small animation when switching
                             selectedTab = tab
                         
                     }) {

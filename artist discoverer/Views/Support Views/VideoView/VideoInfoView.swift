@@ -37,13 +37,13 @@ private struct SongInfoView: View {
     let video: Video
     let feedID: String // <--- 3. Accept Feed ID
     
-    @ObservedObject private var videoManager = FeedManager.shared
+    @ObservedObject private var feedManager = FeedManager.shared
     @Binding var offset: Double
     @Binding var following: Bool
     
     // Computed property to check if THIS video is the one currently playing in THIS feed
     var isCurrentVideo: Bool {
-        return videoManager.feeds[feedID]?.currentIndex == video.id
+        return feedManager.feeds[feedID]?.currentIndex == video.id
     }
     
     var body: some View {

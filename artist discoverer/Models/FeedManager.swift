@@ -2,9 +2,8 @@ import SwiftUI
 import AVKit
 import Combine
 
-// --- 1. The Isolated Context ---
-// This holds everything unique to ONE specific feed (Home, Following, Search, etc.)
 
+@MainActor
 class FeedManager: ObservableObject {
     static let shared = FeedManager()
 
@@ -19,26 +18,45 @@ class FeedManager: ObservableObject {
         self.masterVideos = generateVideos()
         createFeed(id: "home", videos: masterVideos)
     }
-
+    
     // MARK: - Feed Lifecycle
     
     // In VideoManager.swift
-
+    
     func createFeed(id: String, videos: [Video], startIndex: Int = 0, autoPlay: Bool = true) {
         
-        // 1. Check if feed exists
+        print(videos)
+        
+        if videos.isEmpty {
+            print("🧹 List is empty. Removing feed: \(id)")
+            destroyFeed(id: id)
+            return
+        }
+        
         if let existing = feeds[id] {
             
-            // 2. STALENESS CHECK: Are the videos the same?
-            // We compare the IDs. If they match, the feed is good. We do nothing.
+
             let existingIDs = existing.videos.map { $0.id }
             let newIDs = videos.map { $0.id }
             
             if existingIDs == newIDs {
-                return // Feed is up to date!
+                if autoPlay {
+                    let currentIndex = existing.currentIndex
+                    existing.players.values.forEach { $0.pause() }
+ 
+                    
+                    if let player = existing.players[currentIndex] {
+                        if player.timeControlStatus != .playing {
+                    
+                            player.playImmediately(atRate: 1.0)
+                        }
+                    } else {
+                        preload(index: currentIndex, feedID: id, autoPlay: true)
+                    }
+                }
+                return
             }
             
-            // 3. If they differ (e.g. you unliked a song), we must destroy the old stale feed
             print("⚠️ Feed '\(id)' is stale. Refreshing...")
             destroyFeed(id: id)
         }
@@ -53,13 +71,18 @@ class FeedManager: ObservableObject {
     }
     
     func destroyFeed(id: String) {
-        guard id != "home" else { return }
-        
         if let feed = feeds[id] {
-            print("🗑 Destroying Feed: \(id)")
-            feed.players.values.forEach { $0.pause() }
-            feed.players.values.forEach { $0.removeAllItems() }
-            feeds.removeValue(forKey: id)
+            print("🗑️ Destroying Feed: \(id)")
+            
+            feed.loadingTasks.values.forEach { $0.cancel() }
+            
+            // 2. KILL THE PRESENT (Stop active audio)
+            feed.players.values.forEach { player in
+                player.pause()
+                player.removeAllItems()
+            }
+            
+            feeds[id] = nil
         }
     }
     
@@ -89,10 +112,9 @@ class FeedManager: ObservableObject {
         
         feeds[feedID] = feed
         
-        DispatchQueue.global(qos: .userInitiated).async {
-            self.preload(index: index + 1, feedID: feedID, autoPlay: false)
-            self.preload(index: index - 1, feedID: feedID, autoPlay: false)
-        }
+        self.preload(index: index + 1, feedID: feedID, autoPlay: false)
+        self.preload(index: index - 1, feedID: feedID, autoPlay: false)
+    
         
         cleanup(feedID: feedID)
     }
@@ -104,32 +126,48 @@ class FeedManager: ObservableObject {
               index >= 0, index < feed.videos.count,
               feed.players[index] == nil,
               let url = feed.videos[index].url else { return }
+
+        feed.loadingTasks[index]?.cancel()
         
-        let asset = AVURLAsset(url: url)
-        
-        Task {
-            guard let isPlayable = try? await asset.load(.isPlayable), isPlayable else { return }
+        let task = Task { [weak self] in
+            let asset = AVURLAsset(url: url)
             
-            await MainActor.run {
-                guard var currentFeed = self.feeds[feedID],
-                      currentFeed.players[index] == nil else { return }
+            do {
+                let isPlayable = try await asset.load(.isPlayable)
+                if !isPlayable { return }
                 
-                let item = AVPlayerItem(asset: asset)
-                let player = AVQueuePlayer(playerItem: item)
-                player.isMuted = self.isMuted
-                player.actionAtItemEnd = .none
-                let looper = AVPlayerLooper(player: player, templateItem: item)
-                
-                currentFeed.players[index] = player
-                currentFeed.loopers[index] = looper
-                
-                if currentFeed.currentIndex == index && autoPlay {
-                    player.playImmediately(atRate: 1.0)
+                // B. The Update (Main Actor)
+                await MainActor.run {
+                    // Double check cancellation before modifying UI state
+                    if Task.isCancelled { return }
+                    
+                    guard var currentFeed = self?.feeds[feedID] else { return }
+                    
+                    // Create Player
+                    let item = AVPlayerItem(asset: asset)
+                    let player = AVQueuePlayer(playerItem: item)
+                    player.isMuted = self?.isMuted ?? false
+                    player.actionAtItemEnd = .none
+                    let looper = AVPlayerLooper(player: player, templateItem: item)
+                    
+                    // Save Player
+                    currentFeed.players[index] = player
+                    currentFeed.loopers[index] = looper
+                    
+                    // Play if needed
+                    if currentFeed.currentIndex == index && autoPlay {
+                        player.playImmediately(atRate: 1.0)
+                    }
+                    
+                    currentFeed.loadingTasks[index] = nil
+                    self?.feeds[feedID] = currentFeed
                 }
-                
-                self.feeds[feedID] = currentFeed
+            } catch {
+                print("❌ Load cancelled for index \(index)")
             }
         }
+        
+        feeds[feedID]?.loadingTasks[index] = task
     }
     
     func cleanup(feedID: String) {

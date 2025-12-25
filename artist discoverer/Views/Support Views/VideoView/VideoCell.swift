@@ -2,8 +2,6 @@
 //  VideoCell.swift
 //  artist discoverer
 //
-//  Simplified - gets player from VideoManager instead of creating its own
-//
 
 import SwiftUI
 import AVKit
@@ -18,19 +16,21 @@ struct VideoCell: View {
     @ObservedObject var videoManager = FeedManager.shared
     @State private var showLikeBurst = false
     @State private var tapLocation: CGPoint = .zero
+    @State private var likeBurstPulse: Bool = false
     
-    // The Binding that syncs everything
     private var likeBinding: Binding<Bool> {
-        Binding(
-            get: { ActionButtonsManager().isLiked(videoId: video.id, feedID: feedID) },
-            set: { _ in ActionButtonsManager().toggleLike(videoId: video.id) }
+        let manager = ActionButtonsManager.shared
+        return Binding(
+            get: { manager.isLiked(videoId: video.id, feedID: feedID) },
+            set: { _ in manager.toggleLike(videoId: video.id) }
         )
     }
     
     private var followBinding: Binding<Bool> {
-        Binding(
-            get: { ActionButtonsManager().isFollowing(videoId: video.id, feedID: feedID) },
-            set: { _ in ActionButtonsManager().toggleFollow(artistName: video.artistName) }
+        let manager = ActionButtonsManager.shared
+        return Binding(
+            get: { manager.isFollowing(videoId: video.id, feedID: feedID) },
+            set: { _ in manager.toggleFollow(artistName: video.artistName) }
         )
     }
     
@@ -52,11 +52,19 @@ struct VideoCell: View {
             }
             
             if showLikeBurst {
+                
                 Image(systemName: "heart.fill")
                     .font(.system(size: 100))
                     .foregroundStyle(.red)
+                    .scaleEffect(likeBurstPulse ? 1.25 : 0.9)
                     .position(tapLocation)
+                    .rotationEffect(.degrees(likeBurstPulse ? Double(Int.random(in: -10...10)) : 0))
+                    .shadow(color: .black.opacity(0.4), radius: likeBurstPulse ? 14 : 10)
+                    .transition(.scale.combined(with: .opacity))
+                    .opacity(showLikeBurst ? 1 : 0)
+                    .animation(.spring(response: 0.25, dampingFraction: 0.6), value: likeBurstPulse)
             }
+            
             
             if video.paused && !preview {
                 Image(systemName: "play.fill")
@@ -70,15 +78,22 @@ struct VideoCell: View {
         }
         .onTapGesture(count: 2) { location in
             if !preview {
-                tapLocation = location
-                withAnimation {
+                DispatchQueue.main.async {
+                    tapLocation = location
+                    showLikeBurst = true
+                    likeBurstPulse = true
                     if !video.liked {
                         ActionButtonsManager().toggleLike(videoId: video.id)
                     }
-                    showLikeBurst = true
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                    withAnimation { showLikeBurst = false }
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        likeBurstPulse = false
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                        withAnimation(.easeOut(duration: 0.25)) {
+                            showLikeBurst = false
+                        }
+                    }
                 }
             }
         }
